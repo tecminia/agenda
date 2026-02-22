@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login | Agendamento</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <style>
+        :root {
+            --primary: #1a1a1a;
+            --primary-grad: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+            --accent: #4a6cf7;
+            --accent-hover: #3a5ce5;
+            --white: #ffffff;
+            --text: #2d3748;
+            --text-light: #718096;
+            --bg: #f8fafc;
+            --bg-gray: #f1f5f9;
+            --border: #e2e8f0;
+            --shadow: 0 15px 40px rgba(0,0,0,0.12);
+            --shadow-hover: 0 20px 50px rgba(0,0,0,0.15);
+            --radius: 16px;
+            --radius-lg: 24px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); color: var(--text); }
+        body { font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 20px; position: relative; overflow-x: hidden; overflow-y: auto; min-height: 100vh; }
+        body::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: radial-gradient(circle at 15% 50%, rgba(74, 108, 247, 0.08) 0%, transparent 55%), radial-gradient(circle at 85% 30%, rgba(74, 108, 247, 0.05) 0%, transparent 55%); z-index: -1; }
+        .container { max-width: 440px; width: 100%; background: var(--white); border-radius: var(--radius-lg); padding: 50px 40px; box-shadow: var(--shadow); position: relative; overflow: hidden; border: 1px solid var(--border); transition: var(--transition); }
+        .container::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: var(--primary-grad); }
+        .container:hover { box-shadow: var(--shadow-hover); }
+        .logo { text-align: center; margin-bottom: 36px; }
+        .logo-icon { width: 76px; height: 76px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; background: var(--primary-grad); border-radius: 18px; box-shadow: 0 10px 20px rgba(26,26,26,0.15); transition: var(--transition); }
+        .logo-icon:hover { transform: translateY(-4px); box-shadow: 0 15px 30px rgba(26,26,26,0.2); }
+        .logo-icon i { font-size: 2.4rem; color: white; }
+        .logo h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 6px; }
+        .logo p { color: var(--text-light); font-size: 0.9rem; }
+        .tabs { display: flex; gap: 0; margin-bottom: 28px; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--border); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: var(--text-light); font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: var(--transition); font-family: 'Poppins', sans-serif; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 500; font-size: 0.9rem; color: var(--text); }
+        .form-label i { color: var(--accent); }
+        .form-input { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 0.95rem; transition: var(--transition); background: var(--bg-gray); color: var(--text); font-family: 'Poppins', sans-serif; }
+        .form-input:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 4px rgba(74,108,247,0.1); }
+        .form-input::placeholder { color: #94a3b8; }
+        .input-wrap { position: relative; }
+        .input-wrap .form-input { padding-right: 44px; }
+        .toggle-pw { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 1rem; padding: 4px; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: var(--radius); font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: var(--transition); font-family: 'Poppins', sans-serif; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-primary { background: var(--primary-grad); color: white; box-shadow: 0 8px 20px rgba(26,26,26,0.2); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(26,26,26,0.3); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .status-msg { padding: 16px 18px; border-radius: var(--radius); font-size: 0.9rem; text-align: center; margin-top: 16px; display: none; }
+        .status-msg.pending { background: rgba(245,158,11,0.1); border: 2px solid var(--warning); color: #92400e; }
+        .status-msg.blocked { background: rgba(239,68,68,0.1); border: 2px solid var(--error); color: #991b1b; }
+        .status-msg.info { background: rgba(74,108,247,0.1); border: 2px solid var(--accent); color: #1e3a8a; }
+        .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .notification { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 16px 24px; border-radius: var(--radius); font-weight: 500; color: white; text-align: center; z-index: 9999; animation: notifIn 0.3s ease; max-width: 300px; width: 90%; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .notification.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .notification.error { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .notification.info { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        @keyframes notifIn { from { opacity: 0; transform: translate(-50%,-50%) scale(0.9); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+        @media (max-width: 480px) { .container { padding: 40px 24px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-calendar-check"></i></div>
+            <h1>Agendamento</h1>
+            <p>Acesse ou crie sua conta</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="tabLoginBtn" onclick="switchTab('login')">Entrar</button>
+            <button class="tab-btn" id="tabRegisterBtn" onclick="switchTab('register')">Criar Conta</button>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="tab-content active" id="loginTab">
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-envelope"></i> E-mail</label>
+                <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Senha</label>
+                <div class="input-wrap">
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Sua senha" autocomplete="current-password">
+                    <button class="toggle-pw" onclick="togglePw('loginPassword', this)" type="button"><i class="fas fa-eye"></i></button>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="loginBtn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+            <div class="status-msg" id="loginStatus"></div>
+        </div>
+
+        <!-- REGISTER -->
+        <div class="tab-content" id="registerTab">
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-store"></i> Nome do Negócio</label>
+                <input type="text" class="form-input" id="regBusiness" placeholder="Ex: Barbearia do João">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-user"></i> Seu Nome</label>
+                <input type="text" class="form-input" id="regName" placeholder="Nome completo">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-phone"></i> WhatsApp</label>
+                <input type="tel" class="form-input" id="regPhone" placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-envelope"></i> E-mail</label>
+                <input type="email" class="form-input" id="regEmail" placeholder="seu@email.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Senha</label>
+                <div class="input-wrap">
+                    <input type="password" class="form-input" id="regPassword" placeholder="Mínimo 6 caracteres">
+                    <button class="toggle-pw" onclick="togglePw('regPassword', this)" type="button"><i class="fas fa-eye"></i></button>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="registerBtn" onclick="doRegister()"><i class="fas fa-user-plus"></i> Criar Conta</button>
+            <div class="status-msg" id="registerStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7U-JfKAlkPxSyL4AEf5u0BgcDzSXf41M",
+            authDomain: "appvendas-1eebf.firebaseapp.com",
+            projectId: "appvendas-1eebf",
+            storageBucket: "appvendas-1eebf.firebasestorage.app",
+            messagingSenderId: "229472373918",
+            appId: "1:229472373918:web:39cd4940b052b2375f3f8f"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Checar se já está logado
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                try {
+                    const doc = await db.collection('agendamento_users').doc(user.uid).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.status === 'active') {
+                            localStorage.setItem('agendamentoSession', JSON.stringify({ uid: user.uid, email: user.email, name: data.name, businessName: data.businessName, timestamp: new Date().toISOString() }));
+                            window.location.replace('index.html');
+                        }
+                    }
+                } catch(e) {}
+            }
+        });
+
+        function switchTab(tab) {
+            document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+            document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+            document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
+            document.getElementById('tabRegisterBtn').classList.toggle('active', tab === 'register');
+            document.getElementById('loginStatus').style.display = 'none';
+            document.getElementById('registerStatus').style.display = 'none';
+        }
+
+        function togglePw(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            const isText = inp.type === 'text';
+            inp.type = isText ? 'password' : 'text';
+            btn.innerHTML = `<i class="fas fa-eye${isText ? '' : '-slash'}"></i>`;
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Aguarde...';
+            } else {
+                btn.disabled = false;
+            }
+        }
+
+        function showStatus(id, msg, type) {
+            const el = document.getElementById(id);
+            el.className = `status-msg ${type}`;
+            el.innerHTML = msg;
+            el.style.display = 'block';
+        }
+
+        function notify(msg, type = 'info') {
+            document.querySelectorAll('.notification').forEach(n => n.remove());
+            const n = document.createElement('div');
+            n.className = `notification ${type}`;
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+            n.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${msg}</span>`;
+            document.body.appendChild(n);
+            setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity 0.3s'; setTimeout(() => n.remove(), 300); }, 3000);
+        }
+
+        async function doLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) { notify('Preencha e-mail e senha', 'error'); return; }
+
+            setLoading('loginBtn', true);
+            document.getElementById('loginStatus').style.display = 'none';
+
+            try {
+                const cred = await auth.signInWithEmailAndPassword(email, password);
+                const uid = cred.user.uid;
+                const doc = await db.collection('agendamento_users').doc(uid).get();
+
+                if (!doc.exists) {
+                    await auth.signOut();
+                    notify('Conta não encontrada no sistema de agendamento.', 'error');
+                    document.getElementById('loginBtn').disabled = false;
+                    document.getElementById('loginBtn').innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+                    return;
+                }
+
+                const data = doc.data();
+
+                if (data.status === 'pending') {
+                    await auth.signOut();
+                    showStatus('loginStatus', '<i class="fas fa-clock"></i> <strong>Conta em análise.</strong> Aguarde a aprovação do administrador para acessar o painel.', 'pending');
+                    document.getElementById('loginBtn').disabled = false;
+                    document.getElementById('loginBtn').innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+                    return;
+                }
+
+                if (data.status === 'blocked') {
+                    await auth.signOut();
+                    showStatus('loginStatus', '<i class="fas fa-ban"></i> <strong>Conta bloqueada.</strong> Entre em contato com o administrador.', 'blocked');
+                    document.getElementById('loginBtn').disabled = false;
+                    document.getElementById('loginBtn').innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+                    return;
+                }
+
+                if (data.status === 'expired') {
+                    await auth.signOut();
+                    showStatus('loginStatus', '<i class="fas fa-calendar-times"></i> <strong>Plano expirado.</strong> Renove sua mensalidade para continuar.', 'blocked');
+                    document.getElementById('loginBtn').disabled = false;
+                    document.getElementById('loginBtn').innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+                    return;
+                }
+
+                // active
+                localStorage.setItem('agendamentoSession', JSON.stringify({
+                    uid: uid,
+                    email: cred.user.email,
+                    name: data.name,
+                    businessName: data.businessName,
+                    timestamp: new Date().toISOString()
+                }));
+                notify('Bem-vindo!', 'success');
+                setTimeout(() => window.location.replace('index.html'), 800);
+
+            } catch (err) {
+                let msg = 'Erro ao fazer login.';
+                if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'E-mail ou senha incorretos.';
+                else if (err.code === 'auth/too-many-requests') msg = 'Muitas tentativas. Tente novamente em breve.';
+                notify(msg, 'error');
+                document.getElementById('loginBtn').disabled = false;
+                document.getElementById('loginBtn').innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+            }
+        }
+
+        async function doRegister() {
+            const businessName = document.getElementById('regBusiness').value.trim();
+            const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+
+            if (!businessName || !name || !email || !password) { notify('Preencha todos os campos obrigatórios.', 'error'); return; }
+            if (password.length < 6) { notify('A senha deve ter pelo menos 6 caracteres.', 'error'); return; }
+
+            setLoading('registerBtn', true);
+            document.getElementById('registerStatus').style.display = 'none';
+
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(email, password);
+                const uid = cred.user.uid;
+
+                await db.collection('agendamento_users').doc(uid).set({
+                    uid,
+                    name,
+                    businessName,
+                    phone,
+                    email,
+                    status: 'pending',
+                    plan: 'monthly',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    scheduleConfig: {},
+                    services: []
+                });
+
+                await auth.signOut();
+
+                showStatus('registerStatus', '<i class="fas fa-check-circle"></i> <strong>Conta criada!</strong> Aguarde a aprovação do administrador. Você receberá acesso em breve.', 'info');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('registerBtn').innerHTML = '<i class="fas fa-user-plus"></i> Criar Conta';
+
+            } catch (err) {
+                let msg = 'Erro ao criar conta.';
+                if (err.code === 'auth/email-already-in-use') msg = 'Este e-mail já está cadastrado.';
+                else if (err.code === 'auth/invalid-email') msg = 'E-mail inválido.';
+                else if (err.code === 'auth/weak-password') msg = 'Senha muito fraca.';
+                notify(msg, 'error');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('registerBtn').innerHTML = '<i class="fas fa-user-plus"></i> Criar Conta';
+            }
+        }
+
+        // Enter key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const loginActive = document.getElementById('loginTab').classList.contains('active');
+                if (loginActive) doLogin();
+                else doRegister();
+            }
+        });
+    </script>
+</body>
+</html>
