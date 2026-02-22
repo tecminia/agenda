@@ -218,17 +218,15 @@ async function cacheFirst(request) {
       console.log('[SW] Cache First: Servindo do cache', request.url);
       
       // Atualiza cache em background (stale-while-revalidate)
-      event.waitUntil(
-        fetch(request)
-          .then(response => {
-            if (response && response.status === 200) {
-              cache.put(request, response.clone());
-            }
-          })
-          .catch(() => {
-            // Falha silenciosa na atualização
-          })
-      );
+      fetch(request)
+        .then(response => {
+          if (response && response.status === 200) {
+            cache.put(request, response.clone());
+          }
+        })
+        .catch(() => {
+          // Falha silenciosa na atualização
+        });
       
       return cachedResponse;
     }
@@ -294,8 +292,8 @@ async function cacheFirstStale(request) {
   if (cachedResponse) {
     console.log('[SW] Cache First Stale: Servindo do cache', request.url);
     
-    // Inicia atualização em background
-    event.waitUntil(networkPromise);
+    // Inicia atualização em background (sem event.waitUntil - fora do escopo do evento)
+    networkPromise.catch(() => {});
     
     return cachedResponse;
   }

@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Painel — AgendaFácil</title>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FF6B6B">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AgendaFácil">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <!-- /PWA -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -1458,5 +1467,65 @@
     reader.readAsDataURL(file);
   }
 </script>
+
+<!-- ===================== PWA: Service Worker + Install ===================== -->
+<style>
+  #pwa-install-btn {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #FF6B6B;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,107,107,0.4);
+    z-index: 9999;
+    gap: 8px;
+    align-items: center;
+  }
+  #pwa-install-btn.visible { display: flex; }
+</style>
+
+<button id="pwa-install-btn" onclick="installPWA()">⬇️ Instalar App</button>
+
+<script>
+  // ---------- Service Worker ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js', { scope: '/agenda/' })
+        .then(reg => console.log('[PWA] Service Worker registrado. Scope:', reg.scope))
+        .catch(err => console.error('[PWA] Erro ao registrar SW:', err));
+    });
+  }
+
+  // ---------- Botão de Instalação ----------
+  let deferredPrompt = null;
+  const installBtn = document.getElementById('pwa-install-btn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.classList.add('visible');
+  });
+
+  async function installPWA() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.classList.remove('visible');
+  }
+
+  window.addEventListener('appinstalled', () => {
+    installBtn.classList.remove('visible');
+    deferredPrompt = null;
+  });
+</script>
+<!-- ========================================================================= -->
 </body>
 </html>

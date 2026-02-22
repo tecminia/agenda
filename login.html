@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>AgendaFácil — Login</title>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FF6B6B">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AgendaFácil">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <!-- /PWA -->
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -691,5 +700,85 @@
       }
     });
   </script>
+
+  <!-- ===================== PWA: Service Worker + Install ===================== -->
+  <style>
+    #pwa-install-btn {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255,107,107,0.4);
+      z-index: 9999;
+      white-space: nowrap;
+      gap: 8px;
+      align-items: center;
+    }
+    #pwa-install-btn.visible { display: flex; }
+  </style>
+
+  <button id="pwa-install-btn" onclick="installPWA()">
+    ⬇️ Instalar App
+  </button>
+
+  <script>
+    // ---------- Service Worker ----------
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js', { scope: '/agenda/' })
+          .then(reg => {
+            console.log('[PWA] Service Worker registrado. Scope:', reg.scope);
+
+            // Verifica atualização disponível
+            reg.addEventListener('updatefound', () => {
+              const newSW = reg.installing;
+              newSW.addEventListener('statechange', () => {
+                if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[PWA] Nova versão disponível.');
+                }
+              });
+            });
+          })
+          .catch(err => console.error('[PWA] Erro ao registrar SW:', err));
+      });
+    }
+
+    // ---------- Botão de Instalação (beforeinstallprompt) ----------
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('pwa-install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();          // impede o mini-infobar automático
+      deferredPrompt = e;
+      installBtn.classList.add('visible');
+      console.log('[PWA] Pronto para instalar.');
+    });
+
+    async function installPWA() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('[PWA] Usuário escolheu:', outcome);
+      deferredPrompt = null;
+      installBtn.classList.remove('visible');
+    }
+
+    // Oculta botão se já instalado
+    window.addEventListener('appinstalled', () => {
+      console.log('[PWA] App instalado com sucesso!');
+      installBtn.classList.remove('visible');
+      deferredPrompt = null;
+    });
+  </script>
+  <!-- ========================================================================= -->
 </body>
 </html>
