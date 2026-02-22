@@ -537,11 +537,32 @@
     }
 
     // ── CREATE USER DOC ───────────────────────────────────
+    // ── SLUG ─────────────────────────────────────────────
+    function gerarSlug(nome) {
+      return nome
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 50);
+    }
+
+    async function gerarSlugUnico(base) {
+      let slug = base;
+      let tentativa = 1;
+      while (true) {
+        const doc = await db.collection('slugs').doc(slug).get();
+        if (!doc.exists) return slug;
+        tentativa++;
+        slug = `${base}-${tentativa}`;
+      }
+    }
+
     async function createUserDoc(user, nomeExtra) {
       const existing = await db.collection('usuarios').doc(user.uid).get();
       if (existing.exists) return existing.data();
 
-      // Carregar configuração global para pegar valor da mensalidade
       let valorMensalidade = 29.90;
       try {
         const cfg = await db.collection('configuracoes').doc('sistema').get();
@@ -550,7 +571,7 @@
 
       const agora = new Date();
       const vencimento = new Date(agora);
-      vencimento.setDate(vencimento.getDate() + 30); // 30 dias grátis
+      vencimento.setDate(vencimento.getDate() + 30);
 
       const userData = {
         uid: user.uid,
@@ -566,15 +587,24 @@
 
       await db.collection('usuarios').doc(user.uid).set(userData);
 
-      // Criar configurações padrão da empresa
+      // Gerar slug a partir do nome
+      const nomeEmpresa = nomeExtra || user.displayName || 'Minha Empresa';
+      const slugBase = gerarSlug(nomeEmpresa);
+      const slug = await gerarSlugUnico(slugBase);
+
+      // Registrar slug -> uid na coleção global
+      await db.collection('slugs').doc(slug).set({ uid: user.uid });
+
+      // Criar configurações padrão da empresa (já com slug)
       await db.collection('Agendou').doc(user.uid)
         .collection('configuracoes').doc('empresa')
         .set({
-          nomeEmpresa: nomeExtra || user.displayName || 'Minha Empresa',
+          nomeEmpresa,
           slogan: 'Agende seu horário com praticidade',
           whatsapp: '',
           horarios: ['09:00', '11:00', '13:00', '15:00'],
-          tema: 'vermelho-laranja'
+          tema: 'vermelho-laranja',
+          slug
         });
 
       return userData;
