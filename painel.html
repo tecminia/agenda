@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Painel — AgendaFácil</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #E74C3C;
+      --primary-dark: #C0392B;
+      --primary-light: #FF6B6B;
+      --secondary: #F39C12;
+      --secondary-dark: #E67E22;
+      --accent: #3498DB;
+      --success: #27AE60;
+      --warning: #F1C40F;
+      --danger: #E74C3C;
+      --light: #FFFFFF;
+      --dark: #2C3E50;
+      --gray: #7F8C8D;
+      --gray-light: #ECF0F1;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-hover: 0 6px 20px rgba(0,0,0,0.15);
+      --transition: all 0.3s ease;
+      --border-radius: 12px;
+      --border-radius-lg: 16px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+    html { font-size: 16px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F8F9FA;
+      min-height: 100vh;
+      color: var(--dark);
+      line-height: 1.5;
+      padding-bottom: 80px;
+    }
+
+    /* ── AUTH OVERLAY ── */
+    #authOverlay {
+      position: fixed;
+      inset: 0;
+      background: #F8F9FA;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .auth-spinner {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(231,76,60,0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── SUBSCRIPTION BANNER ── */
+    .sub-banner {
+      background: linear-gradient(135deg, #F39C12, #E67E22);
+      color: white;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: none;
+    }
+    .sub-banner.visible { display: block; }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar-actions { display: flex; gap: 8px; }
+    .topbar-btn {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .topbar-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── NAV ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid var(--gray-light);
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    .nav-btn {
+      display: flex; flex-direction: column; align-items: center;
+      background: none; border: none;
+      padding: 8px 12px;
+      color: var(--gray);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition);
+      border-radius: 8px;
+      min-width: 60px;
+    }
+    .nav-btn i { font-size: 1.3rem; margin-bottom: 4px; transition: var(--transition); }
+    .nav-btn.active { color: var(--primary); background: rgba(231,76,60,0.08); }
+    .nav-btn.active i { color: var(--primary); transform: translateY(-2px); }
+
+    /* ── MAIN ── */
+    .main-container { padding: 20px 16px; max-width: 100%; margin: 0 auto; }
+    .page-section { display: none; animation: fadeIn 0.4s ease; }
+    .page-section.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity:0; transform:translateY(10px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── CARDS ── */
+    .content-area {
+      background: white; border-radius: var(--border-radius-lg);
+      box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px;
+    }
+    .content-header {
+      padding: 18px 20px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+    }
+    .content-title { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .filter-container { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-select, .filter-input {
+      flex: 1; min-width: 120px;
+      padding: 10px 14px;
+      border: none; border-radius: 8px;
+      background: rgba(255,255,255,0.9);
+      color: var(--dark); font-size: 0.9rem;
+    }
+    .filter-select:focus, .filter-input:focus { outline: none; }
+
+    .cards-container { padding: 16px; display: grid; gap: 16px; }
+    .data-card {
+      background: white; border-radius: var(--border-radius);
+      box-shadow: var(--shadow); overflow: hidden;
+      transition: var(--transition);
+      border-left: 4px solid var(--primary);
+    }
+    .data-card.folga {
+      border-left-color: var(--warning);
+      background: linear-gradient(135deg,#FFF9E6,#FFF3D9);
+    }
+    .data-card.pago { border-left-color: var(--success); background: linear-gradient(135deg,#E8F6EF,#D4EFDF); }
+    .data-card.today { border-left-color: var(--accent); }
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--gray-light);
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(0,0,0,0.02);
+    }
+    .card-date { font-weight: 600; color: var(--dark); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+    .dia-semana { font-size: 0.8rem; color: var(--gray); font-weight: normal; }
+    .card-badge {
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .card-badge.today { background: var(--accent); color: white; }
+    .card-badge.folga { background: var(--warning); color: var(--dark); }
+    .card-badge.pago { background: var(--success); color: white; }
+    .card-badge.pendente { background: var(--gray); color: white; }
+    .card-body { padding: 16px; }
+    .card-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+    .card-row:last-child { margin-bottom: 0; }
+    .field-group { display: flex; align-items: center; gap: 8px; }
+    .field-icon { color: var(--primary); font-size: 0.85rem; width: 20px; text-align: center; }
+    .field-label { font-size: 0.8rem; color: var(--gray); font-weight: 500; min-width: 70px; }
+    .field-value { font-size: 0.9rem; font-weight: 500; color: var(--dark); text-align: right; flex: 1; }
+    .card-actions {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+      margin-top: 16px; padding-top: 16px;
+      border-top: 1px solid var(--gray-light);
+    }
+
+    /* Add card */
+    .add-card {
+      background: linear-gradient(135deg,#FFE6E6,#FFD6D6);
+      border: 2px dashed var(--primary);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 120px; cursor: pointer; transition: var(--transition);
+    }
+    .add-card:active { transform: scale(0.98); }
+    .add-icon { font-size: 2.2rem; color: var(--primary); margin-bottom: 10px; }
+    .add-text { font-size: 1rem; font-weight: 600; color: var(--primary); }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 16px; border: none; border-radius: 8px;
+      cursor: pointer; font-weight: 600;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; transition: var(--transition); font-size: 0.9rem;
+      min-height: 44px;
+      box-shadow: 0 3px 0 rgba(0,0,0,0.1); position: relative;
+    }
+    .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.1); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; }
+    .btn-secondary { background: linear-gradient(135deg, var(--secondary), var(--secondary-dark)); color: white; }
+    .btn-success { background: linear-gradient(135deg, var(--success), #229954); color: white; }
+    .btn-warning { background: linear-gradient(135deg, var(--warning), #F39C12); color: var(--dark); }
+    .btn-danger { background: linear-gradient(135deg, var(--danger), #C0392B); color: white; }
+    .btn-info { background: linear-gradient(135deg, var(--accent), #2980B9); color: white; }
+    .btn-sm { padding: 8px 12px; font-size: 0.8rem; min-height: 36px; }
+    .btn-block { width: 100%; }
+
+    /* Finance */
+    .cards-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 20px; }
+    .finance-card { background: white; border-radius: var(--border-radius); padding: 16px; box-shadow: var(--shadow); }
+    .finance-card h3 { color: var(--gray); font-size: 0.75rem; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .finance-card .value { font-size: 1.4rem; font-weight: 700; color: var(--dark); }
+
+    /* Gastos */
+    .gastos-mobile-container { padding: 16px; }
+    .gasto-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--gray-light); }
+    .gasto-item:last-child { border-bottom: none; }
+    .gasto-info { flex:1; min-width:0; }
+    .gasto-data { font-size: 0.8rem; color: var(--gray); margin-bottom: 4px; }
+    .gasto-descricao { font-weight: 600; color: var(--dark); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .gasto-categoria { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; background: rgba(127,140,141,0.1); color: var(--gray); }
+    .gasto-valor { font-weight: 700; color: var(--danger); font-size: 0.95rem; margin-left: 12px; white-space: nowrap; }
+    .btn-gasto { margin-left: 8px; padding: 8px; min-width:36px; min-height:36px; }
+
+    /* Config */
+    .config-section { margin-bottom: 20px; padding: 20px; border-radius: var(--border-radius); background: white; box-shadow: var(--shadow); }
+    .config-section h2 { color: var(--primary); margin-bottom: 16px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+
+    /* Temas */
+    .temas-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 12px; }
+    .tema-option { border: 2px solid transparent; border-radius: var(--border-radius); padding: 16px 10px; cursor: pointer; transition: var(--transition); text-align: center; background: white; box-shadow: var(--shadow); }
+    .tema-option.selected { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(231,76,60,0.2); }
+    .tema-preview { width: 50px; height: 50px; border-radius: 12px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.3rem; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    .tema-nome { font-weight: 600; color: var(--dark); font-size: 0.9rem; margin-bottom: 4px; }
+    .tema-info { font-size: 0.75rem; color: var(--gray); }
+    .tema-vermelho-laranja .tema-preview { background: linear-gradient(135deg,#FF6B6B,#FFA500); }
+    .tema-verde-amarelo .tema-preview { background: linear-gradient(135deg,#4CAF50,#FFD700); }
+    .tema-rosa-branco .tema-preview { background: linear-gradient(135deg,#FF69B4,#FFFFFF); color: #333; }
+    .tema-roxo-azul .tema-preview { background: linear-gradient(135deg,#9B59B6,#3498DB); }
+    .tema-branco-cinza .tema-preview { background: linear-gradient(135deg,#FFFFFF,#95A5A6); color: #333; }
+    .tema-amarelo-vermelho .tema-preview { background: linear-gradient(135deg,#FFD700,#FF6B6B); }
+
+    /* Modals */
+    .modal { display: none; position: fixed; z-index: 2000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; padding: 16px; }
+    .modal-content { background: white; border-radius: var(--border-radius-lg); padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width:100%; max-width:400px; max-height:90vh; overflow-y:auto; animation: modalEnter 0.3s ease; }
+    @keyframes modalEnter { from { opacity:0; transform:scale(0.9) translateY(20px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .modal-content h3 { color: var(--dark); margin-bottom: 20px; font-size: 1.2rem; text-align: center; }
+    .modal-content input, .modal-content select, .modal-content textarea {
+      width:100%; padding: 12px 14px; margin-bottom: 14px;
+      border: 1px solid var(--gray-light); border-radius: 8px;
+      background: white; font-size: 0.95rem;
+    }
+    .modal-content input:focus, .modal-content select:focus { outline:none; border-color:var(--primary); }
+    .button-group { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-top: 20px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 90px; left:50%; transform: translateX(-50%) translateY(100px);
+      background: var(--dark); color: white; padding: 14px 20px; border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px;
+      z-index: 3000; opacity:0; transition: var(--transition); max-width: 90%;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity:1; }
+    .toast.success { background: linear-gradient(135deg, var(--success), #229954); }
+    .toast.error { background: linear-gradient(135deg, var(--danger), #C0392B); }
+    .toast.info { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+
+    /* Loading */
+    .loading { text-align: center; padding: 50px 20px; }
+    .loading-spinner { border: 3px solid rgba(231,76,60,0.1); border-top: 3px solid var(--primary); border-radius: 50%; width:40px; height:40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--gray); }
+    .empty-state i { font-size: 3rem; margin-bottom: 16px; color: var(--gray-light); }
+    .empty-state h3 { font-size: 1.2rem; margin-bottom: 8px; color: var(--dark); }
+
+    /* Meu link público */
+    .link-publico-box {
+      background: linear-gradient(135deg, #E8F4FD, #D6EAF8);
+      border: 1px solid #AED6F1;
+      border-radius: var(--border-radius);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .link-publico-box h4 { color: var(--accent); margin-bottom: 8px; font-size: 0.9rem; }
+    .link-display {
+      background: white;
+      border: 1px solid #AED6F1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      color: var(--dark);
+      word-break: break-all;
+      margin-bottom: 10px;
+    }
+    .link-actions { display: flex; gap: 8px; }
+
+    /* Assinatura card */
+    .assinatura-card {
+      border-radius: var(--border-radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .assinatura-card.ativo { background: linear-gradient(135deg,#E8F6EF,#D4EFDF); border: 1px solid #A9DFBF; }
+    .assinatura-card.aviso { background: linear-gradient(135deg,#FEF9E7,#FDEBD0); border: 1px solid #F9E79F; }
+    .assinatura-card.vencido, .assinatura-card.bloqueado { background: linear-gradient(135deg,#FDEDEC,#FADBD8); border: 1px solid #F5B7B1; }
+    .assinatura-icon { font-size: 2rem; }
+    .assinatura-info h4 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .assinatura-info p { font-size: 0.85rem; color: var(--gray); }
+
+    /* Controle */
+    .btn-adicionar-gasto {
+      position: fixed; bottom: 80px; right: 20px;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; border: none;
+      box-shadow: 0 4px 12px rgba(231,76,60,0.3);
+      cursor: pointer; z-index: 999;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .main-container { max-width: 750px; padding: 30px 20px 100px; }
+      .cards-container { grid-template-columns: repeat(2,1fr); }
+      .temas-grid { grid-template-columns: repeat(3,1fr); }
+      .cards-grid { grid-template-columns: repeat(4,1fr); }
+      .bottom-nav { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); width:auto; border-radius:50px; padding:10px 20px; box-shadow:0 5px 20px rgba(0,0,0,0.15); max-width:500px; }
+      .nav-btn { padding:10px 20px; min-width:100px; font-size:0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Auth Loading Overlay -->
+<div id="authOverlay">
+  <div class="auth-spinner"></div>
+  <p style="color:#7F8C8D;">Carregando...</p>
+</div>
+
+<!-- Subscription warning banner -->
+<div class="sub-banner" id="subBanner"></div>
+
+<!-- Top Bar -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="topbar-brand">📅 AgendaFácil</div>
+  <div class="topbar-actions">
+    <button class="topbar-btn" onclick="compartilharLink()"><i class="fas fa-share-alt"></i> Meu Link</button>
+    <button class="topbar-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+
+<div class="main-container" id="mainContent" style="display:none">
+  <!-- AGENDAMENTOS -->
+  <section id="agendamentos" class="page-section active">
+    <div class="content-area">
+      <div class="content-header">
+        <h2 class="content-title"><i class="fas fa-calendar-day"></i> Agendamentos</h2>
+        <div class="filter-container">
+          <select class="filter-select" id="dateFilter">
+            <option value="all">Todos</option>
+            <option value="today">Hoje</option>
+            <option value="next7days">Próximos 7 dias</option>
+            <option value="future">Futuros</option>
+            <option value="past">Passados</option>
+          </select>
+          <select class="filter-select" id="orderFilter">
+            <option value="asc">Mais antigos</option>
+            <option value="desc">Mais recentes</option>
+          </select>
+        </div>
+      </div>
+      <div class="cards-container" id="agendamentosContainer">
+        <div class="loading"><div class="loading-spinner"></div><p>Carregando...</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTROLE -->
+  <section id="controle" class="page-section">
+    <div class="content-area">
+      <div class="content-header">
+        <h2 class="content-title"><i class="fas fa-calendar-week"></i> Controle de Folgas</h2>
+        <div class="filter-container">
+          <button class="btn btn-primary btn-sm" id="btnAtualizarControle"><i class="fas fa-sync-alt"></i> Atualizar</button>
+          <button class="btn btn-secondary btn-sm" id="btnMarcarTodasFolgas"><i class="fas fa-plus"></i> Lote</button>
+        </div>
+      </div>
+      <div class="cards-container" id="controleContainer">
+        <div class="loading"><div class="loading-spinner"></div><p>Carregando...</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINANCEIRO -->
+  <section id="financeiro" class="page-section">
+    <div class="cards-grid">
+      <div class="finance-card"><h3>Receita do Mês</h3><div class="value" id="receitaMes">R$ 0,00</div></div>
+      <div class="finance-card"><h3>Despesas</h3><div class="value" id="despesasMes">R$ 0,00</div></div>
+      <div class="finance-card"><h3>Lucro Líquido</h3><div class="value" id="lucroMes">R$ 0,00</div></div>
+      <div class="finance-card"><h3>Hoje</h3><div class="value" id="totalDiario">R$ 0,00</div></div>
+    </div>
+    <div class="content-area">
+      <div class="content-header">
+        <h2 class="content-title"><i class="fas fa-file-invoice-dollar"></i> Gastos Diários</h2>
+        <div class="filter-container">
+          <input type="month" class="filter-input" id="filtroMes" value="">
+          <select class="filter-select" id="filtroCategoria">
+            <option value="">Todas</option>
+            <option value="material">Material</option>
+            <option value="equipamento">Equipamento</option>
+            <option value="manutencao">Manutenção</option>
+            <option value="transporte">Transporte</option>
+            <option value="outros">Outros</option>
+          </select>
+        </div>
+      </div>
+      <div class="gastos-mobile-container" id="gastosContainer">
+        <div class="loading"><div class="loading-spinner"></div><p>Carregando...</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIGURAÇÕES -->
+  <section id="configuracoes" class="page-section">
+    <!-- Assinatura Status -->
+    <div id="assinaturaCard" class="assinatura-card ativo">
+      <div class="assinatura-icon">✅</div>
+      <div class="assinatura-info">
+        <h4 id="assinaturaStatus">Conta Ativa</h4>
+        <p id="assinaturaDetalhe">Carregando...</p>
+      </div>
+    </div>
+
+    <!-- Link Público -->
+    <div class="link-publico-box">
+      <h4><i class="fas fa-link"></i> Meu Link de Agendamento</h4>
+      <div class="link-display" id="linkPublico">Carregando...</div>
+      <div class="link-actions">
+        <button class="btn btn-info btn-sm" onclick="copiarLink()"><i class="fas fa-copy"></i> Copiar</button>
+        <button class="btn btn-success btn-sm" onclick="compartilharWhatsApp()"><i class="fab fa-whatsapp"></i> Compartilhar</button>
+        <button class="btn btn-sm" onclick="abrirLink()" style="background:linear-gradient(135deg,#8E44AD,#9B59B6);color:white;"><i class="fas fa-external-link-alt"></i> Abrir</button>
+      </div>
+    </div>
+
+    <div id="statusMessage"></div>
+
+    <div class="config-section">
+      <h2><i class="fas fa-building"></i> Empresa</h2>
+      <div style="text-align:center;margin:20px 0;">
+        <img id="imagePreview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Crect width='150' height='150' fill='%23E74C3C'/%3E%3Ccircle cx='75' cy='60' r='30' fill='%23F39C12'/%3E%3Cpath d='M75 100 L45 150 L105 150 Z' fill='%23F39C12'/%3E%3C/svg%3E"
+             alt="Logo" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);margin:15px auto;display:block;">
+        <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+        <button class="btn btn-primary" onclick="document.getElementById('imageUpload').click()">
+          <i class="fas fa-upload"></i> Escolher Logo
+        </button>
+        <div style="font-size:0.8rem;color:var(--gray);margin-top:8px;">JPG, PNG (até 500KB)</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label for="empresaNome" style="display:block;margin-bottom:6px;font-weight:600;color:var(--dark);">Nome da Empresa:</label>
+        <input type="text" id="empresaNome" class="filter-input" maxlength="50" placeholder="Nome da empresa" style="width:100%;border:1px solid var(--gray-light);border-radius:8px;padding:12px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label for="whatsappNumber" style="display:block;margin-bottom:6px;font-weight:600;color:var(--dark);">WhatsApp (com código do país):</label>
+        <input type="tel" id="whatsappNumber" class="filter-input" placeholder="5592984230299" maxlength="13" style="width:100%;border:1px solid var(--gray-light);border-radius:8px;padding:12px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;margin-bottom:6px;font-weight:600;color:var(--dark);">Slogan:</label>
+        <input type="text" id="empresaSlogan" class="filter-input" maxlength="80" placeholder="Agende com facilidade" style="width:100%;border:1px solid var(--gray-light);border-radius:8px;padding:12px;">
+      </div>
+    </div>
+
+    <div class="config-section">
+      <h2><i class="fas fa-palette"></i> Tema</h2>
+      <div class="temas-grid" id="temasContainer"></div>
+    </div>
+
+    <div class="config-section">
+      <h2><i class="fas fa-clock"></i> Horários de Atendimento</h2>
+      <div id="horariosContainer"></div>
+      <button class="btn btn-primary btn-block" onclick="adicionarHorario()" style="margin-top:12px;">
+        <i class="fas fa-plus"></i> Adicionar Horário
+      </button>
+    </div>
+
+    <button class="btn btn-success btn-block" onclick="salvarConfiguracoes()" style="padding:14px;font-size:1rem;margin-top:20px;">
+      <i class="fas fa-save"></i> Salvar Configurações
+    </button>
+  </section>
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="nav-btn active" data-page="agendamentos"><i class="fas fa-calendar-alt"></i> Agenda</button>
+  <button class="nav-btn" data-page="controle"><i class="fas fa-calendar-week"></i> Controle</button>
+  <button class="nav-btn" data-page="financeiro"><i class="fas fa-chart-line"></i> Financeiro</button>
+  <button class="nav-btn" data-page="configuracoes"><i class="fas fa-cog"></i> Config</button>
+</div>
+
+<!-- Modais -->
+<div id="modalNovoAgendamento" class="modal">
+  <div class="modal-content">
+    <h3>Novo Agendamento</h3>
+    <input type="date" id="novoData" required>
+    <input type="time" id="novoHorario" required>
+    <input type="text" id="novoNome" placeholder="Nome do cliente" required>
+    <input type="tel" id="novoContato" placeholder="WhatsApp (opcional)">
+    <input type="number" id="novoQuantidade" placeholder="Quantidade" min="1">
+    <input type="text" id="novoServico" placeholder="Serviço (opcional)">
+    <input type="text" id="novoLocal" placeholder="Local (opcional)">
+    <div class="button-group">
+      <button class="btn btn-primary" id="btnSalvarNovoAgendamento"><i class="fas fa-save"></i> Salvar</button>
+      <button class="btn" onclick="fecharModal('modalNovoAgendamento')"><i class="fas fa-times"></i> Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalEditarAgendamento" class="modal">
+  <div class="modal-content">
+    <h3>Editar Agendamento</h3>
+    <input type="text" id="editarNome" placeholder="Nome do cliente" required>
+    <input type="tel" id="editarContato" placeholder="WhatsApp (opcional)">
+    <input type="number" id="editarQuantidade" placeholder="Quantidade" min="0">
+    <input type="text" id="editarServico" placeholder="Serviço (opcional)">
+    <input type="text" id="editarLocal" placeholder="Local (opcional)">
+    <div class="button-group">
+      <button class="btn btn-primary" id="btnSalvarEditarAgendamento"><i class="fas fa-save"></i> Salvar</button>
+      <button class="btn" onclick="fecharModal('modalEditarAgendamento')"><i class="fas fa-times"></i> Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalPagamento" class="modal">
+  <div class="modal-content">
+    <h3>Registrar Pagamento</h3>
+    <div style="margin-bottom:16px;text-align:center;">
+      <div style="font-size:1rem;color:var(--gray);margin-bottom:6px;">Cliente: <span id="clientePagamento" style="font-weight:600;color:var(--dark);"></span></div>
+      <div style="font-size:0.9rem;color:var(--gray);">Data: <span id="dataPagamento" style="font-weight:600;color:var(--dark);"></span></div>
+    </div>
+    <input type="number" id="valorPago" placeholder="Valor recebido (R$)" step="0.01" required>
+    <select id="formaPagamento">
+      <option value="dinheiro">Dinheiro</option>
+      <option value="pix">PIX</option>
+      <option value="cartao">Cartão</option>
+      <option value="transferencia">Transferência</option>
+    </select>
+    <div class="button-group">
+      <button class="btn btn-success" id="btnConfirmarPagamento"><i class="fas fa-check-circle"></i> Confirmar</button>
+      <button class="btn" onclick="fecharModal('modalPagamento')"><i class="fas fa-times"></i> Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalFolgaLote" class="modal">
+  <div class="modal-content">
+    <h3>Folga em Lote</h3>
+    <input type="date" id="dataInicial" required>
+    <input type="date" id="dataFinal" required>
+    <p style="color:var(--gray);font-size:0.85rem;margin-bottom:16px;text-align:center;">Marcar folgas entre as datas selecionadas.</p>
+    <div class="button-group">
+      <button class="btn btn-primary" id="btnConfirmarFolgaLote"><i class="fas fa-check"></i> Confirmar</button>
+      <button class="btn" onclick="fecharModal('modalFolgaLote')"><i class="fas fa-times"></i> Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalDespesa" class="modal">
+  <div class="modal-content">
+    <h3>Nova Despesa</h3>
+    <input type="date" id="despesaData">
+    <input type="text" id="despesaDescricao" placeholder="Descrição" required>
+    <select id="despesaCategoria" required>
+      <option value="">Selecione a categoria</option>
+      <option value="material">Material</option>
+      <option value="equipamento">Equipamento</option>
+      <option value="manutencao">Manutenção</option>
+      <option value="transporte">Transporte</option>
+      <option value="outros">Outros</option>
+    </select>
+    <input type="number" id="despesaValor" placeholder="Valor em R$" step="0.01" required>
+    <div class="button-group">
+      <button class="btn btn-primary" id="confirmarDespesa"><i class="fas fa-save"></i> Salvar</button>
+      <button class="btn" onclick="fecharModal('modalDespesa')"><i class="fas fa-times"></i> Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalLinkPublico" class="modal">
+  <div class="modal-content">
+    <h3>🔗 Link de Agendamento</h3>
+    <p style="text-align:center;color:var(--gray);margin-bottom:16px;font-size:0.9rem;">Compartilhe este link com seus clientes para que possam agendar online:</p>
+    <div class="link-display" id="modalLinkDisplay" style="margin-bottom:16px;"></div>
+    <div class="button-group">
+      <button class="btn btn-info" onclick="copiarLink()"><i class="fas fa-copy"></i> Copiar Link</button>
+      <button class="btn btn-success" onclick="compartilharWhatsApp()"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+      <button class="btn" onclick="abrirLink()" style="background:linear-gradient(135deg,#8E44AD,#9B59B6);color:white;"><i class="fas fa-external-link-alt"></i> Abrir Link</button>
+    </div>
+    <button class="btn btn-block" onclick="fecharModal('modalLinkPublico')" style="margin-top:10px;"><i class="fas fa-times"></i> Fechar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<button class="btn-adicionar-gasto" id="btnAdicionarGasto" onclick="abrirModalDespesa()" style="display:none;"><i class="fas fa-plus"></i></button>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuX3SRhDvZS_BiKIL1q_VFwacMBwZ5tbU",
+    authDomain: "appagenda-f278b.firebaseapp.com",
+    projectId: "appagenda-f278b",
+    storageBucket: "appagenda-f278b.firebasestorage.app",
+    messagingSenderId: "676987896115",
+    appId: "1:676987896115:web:74ecdbedabca34f5923e46"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ── GLOBALS ────────────────────────────────────────────
+  let currentUser = null;
+  let userUID = null;
+  let allAgendamentos = [];
+  let dadosMensais = [];
+  let dadosDiarios = [];
+  let receitasDiarias = [];
+  let horariosFixos = [];
+  let configuracaoEmpresa = {};
+  let imagemBase64 = null;
+  let currentDateFilter = 'all';
+  let currentOrder = 'asc';
+  let agendamentoAtual = null;
+  let editarAgendamentoAtual = null;
+  let temasDisponiveis = [];
+  let temaAtual = 'vermelho-laranja';
+  let linkPublico = '';
+
+  // ── AUTH CHECK ─────────────────────────────────────────
+  auth.onAuthStateChanged(async user => {
+    if (!user) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    currentUser = user;
+    userUID = user.uid;
+
+    try {
+      const userDoc = await db.collection('usuarios').doc(userUID).get();
+      if (!userDoc.exists) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const userData = userDoc.data();
+
+      // Admin goes to admin panel
+      if (userData.role === 'admin') {
+        window.location.href = 'admin.html';
+        return;
+      }
+
+      // Check subscription
+      await verificarEExibirAssinatura(userUID, userData);
+
+      if (userData.plano === 'bloqueado') {
+        document.getElementById('authOverlay').innerHTML = `
+          <div style="text-align:center;padding:40px;max-width:380px;">
+            <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
+            <h2 style="color:#E74C3C;font-size:1.4rem;margin-bottom:12px;">Conta Bloqueada</h2>
+            <p style="color:#7F8C8D;margin-bottom:20px;">Sua conta foi bloqueada. Entre em contato com o administrador para regularizar.</p>
+            <button onclick="logout()" style="background:linear-gradient(135deg,#E74C3C,#C0392B);color:white;border:none;padding:12px 24px;border-radius:10px;cursor:pointer;font-weight:600;font-size:1rem;">Sair</button>
+          </div>`;
+        return;
+      }
+
+      // Build public link
+      linkPublico = `${window.location.origin}/clientes.html?uid=${userUID}`;
+      document.getElementById('linkPublico').textContent = linkPublico;
+      document.getElementById('modalLinkDisplay').textContent = linkPublico;
+
+      // Show UI
+      document.getElementById('authOverlay').style.display = 'none';
+      document.getElementById('topbar').style.display = 'flex';
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('bottomNav').style.display = 'flex';
+
+      // Init
+      inicializarNavegacao();
+      const hoje = new Date();
+      document.getElementById('filtroMes').value = hoje.toISOString().slice(0, 7);
+      document.getElementById('despesaData').value = hoje.toISOString().split('T')[0];
+
+    } catch (e) {
+      console.error('Auth error:', e);
+      window.location.href = 'index.html';
+    }
+  });
+
+  async function verificarEExibirAssinatura(uid, userData) {
+    const agora = new Date();
+    let vencimento = null;
+
+    if (userData.dataVencimento?.toDate) {
+      vencimento = userData.dataVencimento.toDate();
+    } else if (userData.dataVencimento) {
+      vencimento = new Date(userData.dataVencimento);
+    }
+
+    if (!vencimento) return;
+
+    // Load diasAviso from config
+    let diasAviso = 5;
+    try {
+      const cfg = await db.collection('configuracoes').doc('sistema').get();
+      if (cfg.exists) diasAviso = cfg.data().diasAviso || 5;
+    } catch(e) {}
+
+    const diffMs = vencimento - agora;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    const card = document.getElementById('assinaturaCard');
+    const statusEl = document.getElementById('assinaturaStatus');
+    const detalheEl = document.getElementById('assinaturaDetalhe');
+    const banner = document.getElementById('subBanner');
+
+    const fmtDate = vencimento.toLocaleDateString('pt-BR');
+
+    if (userData.plano === 'bloqueado' || diffDays <= 0) {
+      card.className = 'assinatura-card vencido';
+      statusEl.textContent = 'Conta Vencida/Bloqueada';
+      detalheEl.textContent = 'Entre em contato com o administrador.';
+      await db.collection('usuarios').doc(uid).update({ plano: 'vencido' });
+    } else if (diffDays <= diasAviso) {
+      card.className = 'assinatura-card aviso';
+      statusEl.textContent = '⚠ Vencimento Próximo';
+      detalheEl.textContent = `Sua mensalidade vence em ${diffDays} dia(s) — ${fmtDate}`;
+      banner.textContent = `⚠ Sua assinatura vence em ${diffDays} dia(s) (${fmtDate}). Regularize para não perder o acesso.`;
+      banner.classList.add('visible');
+    } else {
+      card.className = 'assinatura-card ativo';
+      statusEl.textContent = '✅ Conta Ativa';
+      detalheEl.textContent = `Próximo vencimento: ${fmtDate} (${diffDays} dias restantes)`;
+    }
+  }
+
+  function logout() {
+    auth.signOut().then(() => window.location.href = 'index.html');
+  }
+
+  function compartilharLink() {
+    document.getElementById('modalLinkPublico').style.display = 'flex';
+  }
+
+  function copiarLink() {
+    navigator.clipboard.writeText(linkPublico).then(() => mostrarToast('Link copiado!', 'success'));
+  }
+
+
+  function abrirLink() {
+    window.open(linkPublico, '_blank');
+  }
+  function compartilharWhatsApp() {
+    const msg = `Olá! Agende seu horário pelo link: ${linkPublico}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  // ── UTILS ─────────────────────────────────────────────
+  function formatarDataBrasileira(d) {
+    if (!d) return '';
+    const p = d.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+  }
+  function formatarHora(h) { return h ? h.replace(':', 'h') : ''; }
+  function formatarValor(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function getNomeDia(d) {
+    if (!d) return '';
+    const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const [a,m,di] = d.split('-').map(Number);
+    return dias[new Date(a, m-1, di).getDay()];
+  }
+  function getTodayManaus() {
+    const now = new Date();
+    const offset = -4 * 60;
+    const localTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const manausTime = new Date(localTime + (offset * 60000));
+    return manausTime.toISOString().split('T')[0];
+  }
+  function ordenarHorarios(arr) {
+    return arr.sort((a, b) => {
+      const [ha,ma] = a.split(':').map(Number);
+      const [hb,mb] = b.split(':').map(Number);
+      return ha !== hb ? ha - hb : ma - mb;
+    });
+  }
+  function mostrarToast(msg, tipo = 'success') {
+    const toast = document.getElementById('toast');
+    const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
+    toast.innerHTML = `<i class="fas fa-${icons[tipo] || 'info-circle'}"></i><span>${msg}</span>`;
+    toast.className = `toast ${tipo} show`;
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+  function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+
+  // ── NAVEGAÇÃO ─────────────────────────────────────────
+  function inicializarNavegacao() {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const page = btn.dataset.page;
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        document.getElementById(page).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        switch(page) {
+          case 'agendamentos': carregarAgendamentos(); break;
+          case 'controle': carregarDadosControle(); break;
+          case 'financeiro': carregarDadosFinanceiros(); break;
+          case 'configuracoes': carregarConfiguracoes(); break;
+        }
+        document.getElementById('btnAdicionarGasto').style.display = page === 'financeiro' ? 'flex' : 'none';
+      });
+    });
+
+    // Event listeners
+    document.getElementById('dateFilter').addEventListener('change', e => { currentDateFilter = e.target.value; aplicarFiltros(); });
+    document.getElementById('orderFilter').addEventListener('change', e => { currentOrder = e.target.value; aplicarFiltros(); });
+    document.getElementById('btnAtualizarControle').addEventListener('click', () => { carregarDadosControle(); mostrarToast('Atualizado', 'info'); });
+    document.getElementById('btnMarcarTodasFolgas').addEventListener('click', abrirModalFolgaLote);
+    document.getElementById('btnConfirmarFolgaLote').addEventListener('click', confirmarFolgaLote);
+    document.getElementById('confirmarDespesa').addEventListener('click', salvarDespesa);
+    document.getElementById('btnConfirmarPagamento').addEventListener('click', confirmarPagamento);
+    document.getElementById('btnSalvarNovoAgendamento').addEventListener('click', salvarNovoAgendamento);
+    document.getElementById('btnSalvarEditarAgendamento').addEventListener('click', salvarEditarAgendamento);
+    document.getElementById('whatsappNumber').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').substring(0, 13);
+    });
+    document.getElementById('filtroMes').addEventListener('change', carregarGastosDiarios);
+    document.getElementById('filtroCategoria').addEventListener('change', exibirGastosMobile);
+    document.getElementById('imageUpload').addEventListener('change', processarImagem);
+    window.addEventListener('click', e => { if (e.target.classList.contains('modal')) e.target.style.display = 'none'; });
+
+    carregarAgendamentos();
+  }
+
+  // ── BASE PATH ─────────────────────────────────────────
+  function agendouRef() { return db.collection('Agendou').doc(userUID); }
+
+  // ── AGENDAMENTOS ──────────────────────────────────────
+  async function carregarAgendamentos() {
+    const container = document.getElementById('agendamentosContainer');
+    container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Carregando...</p></div>';
+    try {
+      await carregarAgendamentosBase();
+      aplicarFiltros();
+      const addCard = document.createElement('div');
+      addCard.className = 'data-card add-card';
+      addCard.innerHTML = '<div class="add-icon"><i class="fas fa-plus-circle"></i></div><div class="add-text">Novo Agendamento</div>';
+      addCard.onclick = abrirModalNovoAgendamento;
+      container.insertBefore(addCard, container.firstChild);
+    } catch (e) {
+      console.error(e);
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar</h3></div>';
+    }
+  }
+
+  async function carregarAgendamentosBase() {
+    const snapshot = await agendouRef().collection('agendamentos').get();
+    allAgendamentos = [];
+    const promises = snapshot.docs.map(async doc => {
+      const dataStr = doc.id;
+      const horariosSnap = await doc.ref.collection('horarios').get();
+      horariosSnap.forEach(hDoc => {
+        const dados = hDoc.data();
+        const [a,m,d] = dataStr.split('-');
+        const [hr,min] = hDoc.id.split(':');
+        allAgendamentos.push({
+          id: hDoc.id, data: dataStr, horario: hDoc.id, ...dados,
+          timestamp: new Date(a, m-1, d, hr, min), dataId: dataStr
+        });
+      });
+    });
+    await Promise.all(promises);
+  }
+
+  function aplicarFiltros() {
+    let list = [...allAgendamentos];
+    const hoje = getTodayManaus();
+    if (currentDateFilter === 'today') list = list.filter(a => a.data === hoje);
+    else if (currentDateFilter === 'next7days') {
+      const lim = new Date(); lim.setDate(lim.getDate()+7);
+      const limStr = lim.toISOString().split('T')[0];
+      list = list.filter(a => a.data >= hoje && a.data <= limStr);
+    } else if (currentDateFilter === 'future') list = list.filter(a => a.data >= hoje);
+    else if (currentDateFilter === 'past') list = list.filter(a => a.data < hoje);
+    list.sort((a,b) => currentOrder === 'asc' ? a.timestamp-b.timestamp : b.timestamp-a.timestamp);
+    exibirAgendamentos(list);
+  }
+
+  function exibirAgendamentos(list) {
+    const container = document.getElementById('agendamentosContainer');
+    if (!list.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-times"></i><h3>Nenhum agendamento</h3></div>'; return; }
+    const hoje = getTodayManaus();
+    container.innerHTML = list.map(ag => {
+      const isToday = ag.data === hoje;
+      const isFolga = ag.nome === 'Folga';
+      const temPag = ag.pagamento?.valor;
+      const dia = getNomeDia(ag.data);
+      const badge = isToday ? 'today' : isFolga ? 'folga' : temPag ? 'pago' : 'pendente';
+      const badgeTxt = isToday ? 'Hoje' : isFolga ? 'Folga' : temPag ? 'Pago' : 'Pendente';
+      if (isFolga) return `
+        <div class="data-card folga">
+          <div class="card-header">
+            <div class="card-date"><i class="fas fa-umbrella-beach"></i> ${formatarDataBrasileira(ag.data)} <span class="dia-semana">${dia}</span></div>
+            <span class="card-badge ${badge}">${badgeTxt}</span>
+          </div>
+          <div class="card-body">
+            <div class="card-row"><div class="field-group"><i class="fas fa-bed field-icon"></i><span class="field-label">Status:</span></div><span class="field-value">Dia de descanso</span></div>
+            <div class="card-actions"><button class="btn btn-danger btn-sm btn-block" onclick="excluirAgendamento('${ag.dataId}','${ag.horario}')"><i class="fas fa-trash"></i> Apagar</button></div>
+          </div>
+        </div>`;
+      return `
+        <div class="data-card ${temPag ? 'pago':''} ${isToday ? 'today':''}">
+          <div class="card-header">
+            <div class="card-date"><i class="fas fa-calendar-day"></i> ${formatarDataBrasileira(ag.data)} <span class="dia-semana">${dia}</span></div>
+            <span class="card-badge ${badge}">${badgeTxt}</span>
+          </div>
+          <div class="card-body">
+            <div class="card-row"><div class="field-group"><i class="fas fa-user field-icon"></i><span class="field-label">Cliente:</span></div><span class="field-value">${ag.nome}</span></div>
+            ${ag.quantidade ? `<div class="card-row"><div class="field-group"><i class="fas fa-box field-icon"></i><span class="field-label">Qtd.:</span></div><span class="field-value">${ag.quantidade}</span></div>` : ''}
+            ${ag.contato ? `<div class="card-row"><div class="field-group"><i class="fas fa-phone field-icon"></i><span class="field-label">Contato:</span></div><span class="field-value">${ag.contato}</span></div>` : ''}
+            <div class="card-row"><div class="field-group"><i class="fas fa-clock field-icon"></i><span class="field-label">Horário:</span></div><span class="field-value">${formatarHora(ag.horario)}</span></div>
+            ${ag.local ? `<div class="card-row"><div class="field-group"><i class="fas fa-map-marker-alt field-icon"></i><span class="field-label">Local:</span></div><span class="field-value" style="font-size:0.8rem;">${ag.local}</span></div>` : ''}
+            <div class="card-actions">
+              ${!temPag ? `<button class="btn btn-success btn-sm" onclick="abrirModalPagamento('${ag.dataId}','${ag.horario}','${ag.nome}','${ag.data}')"><i class="fas fa-money-bill-wave"></i></button>` : ''}
+              <button class="btn btn-warning btn-sm" onclick="abrirModalEditar('${ag.dataId}','${ag.horario}')"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-danger btn-sm" onclick="excluirAgendamento('${ag.dataId}','${ag.horario}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function abrirModalNovoAgendamento() {
+    const hoje = getTodayManaus();
+    const agora = new Date();
+    document.getElementById('novoData').value = hoje;
+    document.getElementById('novoHorario').value = `${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`;
+    ['novoNome','novoContato','novoServico','novoLocal'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('novoQuantidade').value = '';
+    document.getElementById('modalNovoAgendamento').style.display = 'flex';
+  }
+
+  async function salvarNovoAgendamento() {
+    const data = document.getElementById('novoData').value;
+    const horario = document.getElementById('novoHorario').value;
+    const nome = document.getElementById('novoNome').value.trim();
+    if (!nome || !data || !horario) { mostrarToast('Preencha os campos obrigatórios', 'error'); return; }
+    try {
+      const dataRef = agendouRef().collection('agendamentos').doc(data);
+      await dataRef.set({ horarios: firebase.firestore.FieldValue.arrayUnion(horario) }, { merge: true });
+      await dataRef.collection('horarios').doc(horario).set({
+        nome, contato: document.getElementById('novoContato').value.trim() || '',
+        quantidade: parseInt(document.getElementById('novoQuantidade').value) || 0,
+        servico: document.getElementById('novoServico').value.trim() || '',
+        local: document.getElementById('novoLocal').value.trim() || '',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      fecharModal('modalNovoAgendamento');
+      mostrarToast('Agendamento criado!', 'success');
+      setTimeout(carregarAgendamentos, 500);
+    } catch(e) { console.error(e); mostrarToast('Erro ao salvar', 'error'); }
+  }
+
+  async function abrirModalEditar(dataId, horario) {
+    try {
+      const doc = await agendouRef().collection('agendamentos').doc(dataId).collection('horarios').doc(horario).get();
+      if (!doc.exists) { mostrarToast('Não encontrado', 'error'); return; }
+      const d = doc.data();
+      editarAgendamentoAtual = { dataId, horario, ref: doc.ref };
+      document.getElementById('editarNome').value = d.nome || '';
+      document.getElementById('editarContato').value = d.contato || '';
+      document.getElementById('editarQuantidade').value = d.quantidade || '';
+      document.getElementById('editarServico').value = d.servico || '';
+      document.getElementById('editarLocal').value = d.local || '';
+      document.getElementById('modalEditarAgendamento').style.display = 'flex';
+    } catch(e) { mostrarToast('Erro ao carregar', 'error'); }
+  }
+
+  async function salvarEditarAgendamento() {
+    if (!editarAgendamentoAtual) return;
+    const nome = document.getElementById('editarNome').value.trim();
+    if (!nome) { mostrarToast('Nome é obrigatório', 'error'); return; }
+    try {
+      await editarAgendamentoAtual.ref.update({
+        nome, contato: document.getElementById('editarContato').value.trim(),
+        quantidade: parseInt(document.getElementById('editarQuantidade').value) || 0,
+        servico: document.getElementById('editarServico').value.trim(),
+        local: document.getElementById('editarLocal').value.trim(),
+        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      fecharModal('modalEditarAgendamento');
+      mostrarToast('Atualizado!', 'success');
+      setTimeout(carregarAgendamentos, 500);
+    } catch(e) { mostrarToast('Erro ao atualizar', 'error'); }
+  }
+
+  function abrirModalPagamento(dataId, horario, nome, data) {
+    agendamentoAtual = { dataId, horario };
+    document.getElementById('clientePagamento').textContent = nome;
+    document.getElementById('dataPagamento').textContent = formatarDataBrasileira(data);
+    document.getElementById('valorPago').value = '';
+    document.getElementById('formaPagamento').value = 'dinheiro';
+    document.getElementById('modalPagamento').style.display = 'flex';
+  }
+
+  async function confirmarPagamento() {
+    if (!agendamentoAtual) return;
+    const valor = parseFloat(document.getElementById('valorPago').value);
+    const forma = document.getElementById('formaPagamento').value;
+    if (isNaN(valor) || valor <= 0) { mostrarToast('Digite um valor válido', 'error'); return; }
+    try {
+      await agendouRef().collection('agendamentos').doc(agendamentoAtual.dataId)
+        .collection('horarios').doc(agendamentoAtual.horario)
+        .update({ pagamento: { valor, forma, data: firebase.firestore.FieldValue.serverTimestamp() } });
+      await agendouRef().collection('pagamentos').add({
+        valor, forma, dataAgendamento: agendamentoAtual.dataId,
+        horario: agendamentoAtual.horario, dataRegistro: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      fecharModal('modalPagamento');
+      mostrarToast('Pagamento registrado!', 'success');
+      setTimeout(carregarAgendamentos, 500);
+    } catch(e) { mostrarToast('Erro ao registrar', 'error'); }
+  }
+
+  async function excluirAgendamento(dataId, horario) {
+    if (!confirm('Excluir este agendamento?')) return;
+    try {
+      await agendouRef().collection('agendamentos').doc(dataId)
+        .update({ horarios: firebase.firestore.FieldValue.arrayRemove(horario) });
+      await agendouRef().collection('agendamentos').doc(dataId).collection('horarios').doc(horario).delete();
+      mostrarToast('Excluído!', 'success');
+      setTimeout(carregarAgendamentos, 500);
+    } catch(e) { mostrarToast('Erro ao excluir', 'error'); }
+  }
+
+  // ── CONTROLE ──────────────────────────────────────────
+  async function carregarDadosControle() {
+    await carregarConfiguracoesBase();
+    const container = document.getElementById('controleContainer');
+    container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Carregando...</p></div>';
+    const hoje = new Date();
+    const dom = new Date(hoje); dom.setDate(hoje.getDate() - hoje.getDay());
+    let html = '';
+    for (let s = 0; s < 2; s++) {
+      const ini = new Date(dom); ini.setDate(dom.getDate() + s*7);
+      const fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+      html += `<div class="content-area" style="margin-bottom:20px;">
+        <div class="content-header"><h2 class="content-title"><i class="fas fa-calendar-week"></i> Semana ${s+1}: ${formatarDataBrasileira(ini.toISOString().split('T')[0])} a ${formatarDataBrasileira(fim.toISOString().split('T')[0])}</h2></div>
+        <div class="cards-container" id="semana${s}"><div class="loading"><div class="loading-spinner"></div></div></div></div>`;
+    }
+    container.innerHTML = html;
+    for (let s = 0; s < 2; s++) {
+      const ini = new Date(dom); ini.setDate(dom.getDate() + s*7);
+      carregarSemana(s, ini);
+    }
+  }
+
+  async function carregarSemana(idx, dataInicio) {
+    const dias = Array.from({length:7}, (_,i) => {
+      const d = new Date(dataInicio); d.setDate(dataInicio.getDate()+i);
+      return d.toISOString().split('T')[0];
+    });
+    const container = document.getElementById(`semana${idx}`);
+    const hoje = getTodayManaus();
+    const resultados = await Promise.all(dias.map(async dataStr => {
+      const doc = await agendouRef().collection('agendamentos').doc(dataStr).get();
+      const horarios = doc.exists ? (doc.data().horarios || []) : [];
+      const hdocs = await Promise.all(horarios.map(h => agendouRef().collection('agendamentos').doc(dataStr).collection('horarios').doc(h).get()));
+      const ativos = hdocs.filter(d => d.exists).length;
+      const isFolga = ativos >= horariosFixos.length && horariosFixos.length > 0;
+      return { dataStr, isFolga, ativos };
+    }));
+    container.innerHTML = resultados.map(({dataStr, isFolga, ativos}) => {
+      const isToday = dataStr === hoje;
+      const dia = getNomeDia(dataStr);
+      return `<div class="data-card ${isFolga?'folga':''} ${isToday?'today':''}">
+        <div class="card-header"><div class="card-date"><i class="fas fa-calendar-day"></i> ${formatarDataBrasileira(dataStr)} <span class="dia-semana">${dia}</span>${isToday?'<span class="card-badge today">Hoje</span>':''}${isFolga?'<span class="card-badge folga">Folga</span>':''}</div></div>
+        <div class="card-body">
+          <div class="card-row"><span class="field-label">Horários:</span><span class="field-value">${ativos}/${horariosFixos.length}</span></div>
+          <div class="card-actions">${isFolga ?
+            `<button class="btn btn-danger btn-sm btn-block" onclick="removerFolga('${dataStr}')"><i class="fas fa-times"></i> Remover Folga</button>` :
+            `<button class="btn btn-secondary btn-sm btn-block" onclick="marcarFolga('${dataStr}')"><i class="fas fa-plus"></i> Marcar Folga</button>`}</div>
+        </div></div>`;
+    }).join('');
+  }
+
+  async function marcarFolga(dataId) {
+    await agendouRef().collection('agendamentos').doc(dataId).set({ horarios: horariosFixos }, { merge: true });
+    for (const h of horariosFixos) {
+      await agendouRef().collection('agendamentos').doc(dataId).collection('horarios').doc(h).set({
+        nome: 'Folga', contato: '-', servico: 'Folga', local: 'Folga marcada',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    mostrarToast(`Folga marcada para ${formatarDataBrasileira(dataId)}`, 'success');
+    setTimeout(carregarDadosControle, 800);
+  }
+
+  async function removerFolga(dataId) {
+    for (const h of horariosFixos) {
+      await agendouRef().collection('agendamentos').doc(dataId).collection('horarios').doc(h).delete();
+    }
+    await agendouRef().collection('agendamentos').doc(dataId).update({ horarios: firebase.firestore.FieldValue.delete() });
+    mostrarToast(`Folga removida de ${formatarDataBrasileira(dataId)}`, 'success');
+    setTimeout(carregarDadosControle, 800);
+  }
+
+  function abrirModalFolgaLote() {
+    const hoje = new Date();
+    const amanha = new Date(hoje); amanha.setDate(hoje.getDate()+1);
+    document.getElementById('dataInicial').value = hoje.toISOString().split('T')[0];
+    document.getElementById('dataFinal').value = amanha.toISOString().split('T')[0];
+    document.getElementById('modalFolgaLote').style.display = 'flex';
+  }
+
+  async function confirmarFolgaLote() {
+    const ini = new Date(document.getElementById('dataInicial').value);
+    const fim = new Date(document.getElementById('dataFinal').value);
+    if (ini > fim) { mostrarToast('Data inicial não pode ser maior que final', 'error'); return; }
+    const diff = Math.ceil((fim-ini)/(86400000)) + 1;
+    if (diff > 30) { mostrarToast('Máximo 30 dias por vez', 'error'); return; }
+    await carregarConfiguracoesBase();
+    for (let i = 0; i < diff; i++) {
+      const d = new Date(ini); d.setDate(ini.getDate()+i);
+      const dataId = d.toISOString().split('T')[0];
+      await agendouRef().collection('agendamentos').doc(dataId).set({ horarios: horariosFixos }, { merge: true });
+      for (const h of horariosFixos) {
+        await agendouRef().collection('agendamentos').doc(dataId).collection('horarios').doc(h).set({
+          nome:'Folga', contato:'-', servico:'Folga', local:'Folga marcada',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+    fecharModal('modalFolgaLote');
+    mostrarToast(`Folgas marcadas para ${diff} dias`, 'success');
+    setTimeout(carregarDadosControle, 800);
+  }
+
+  // ── FINANCEIRO ────────────────────────────────────────
+  async function carregarDadosFinanceiros() {
+    await carregarDadosMensais();
+    await carregarGastosDiarios();
+    await carregarReceitasDiarias();
+    await carregarResumoFinanceiro();
+  }
+
+  async function carregarDadosMensais() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    try {
+      const [recSnap, despSnap] = await Promise.all([
+        agendouRef().collection('pagamentos').get(),
+        agendouRef().collection('despesas').get()
+      ]);
+      const receitas = {}, despesas = {};
+      recSnap.forEach(d => {
+        const { valor, dataRegistro } = d.data();
+        const dt = dataRegistro?.seconds ? new Date(dataRegistro.seconds*1000) : new Date();
+        const k = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+        receitas[k] = (receitas[k]||0) + valor;
+      });
+      despSnap.forEach(d => {
+        const { valor, data } = d.data();
+        const dt = data?.seconds ? new Date(data.seconds*1000) : new Date();
+        const k = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+        despesas[k] = (despesas[k]||0) + valor;
+      });
+      dadosMensais = Array.from({length:12},(_,i) => {
+        const k = `${ano}-${String(i+1).padStart(2,'0')}`;
+        const r = receitas[k]||0, d = despesas[k]||0;
+        return { mes: i+1, receita: r, despesa: d, lucro: r-d, ano };
+      });
+    } catch(e) { console.error(e); }
+  }
+
+  async function carregarReceitasDiarias() {
+    const snap = await agendouRef().collection('pagamentos').get();
+    receitasDiarias = [];
+    snap.forEach(d => {
+      const { valor, dataRegistro } = d.data();
+      const dt = dataRegistro?.seconds ? new Date(dataRegistro.seconds*1000) : new Date();
+      receitasDiarias.push({ data: dt, valor });
+    });
+  }
+
+  async function carregarGastosDiarios() {
+    const mes = document.getElementById('filtroMes').value;
+    const snap = await agendouRef().collection('despesas').get();
+    dadosDiarios = [];
+    snap.forEach(d => {
+      const dep = d.data(); dep.id = d.id;
+      dep.data = dep.data?.seconds ? new Date(dep.data.seconds*1000) : new Date();
+      dadosDiarios.push(dep);
+    });
+    if (mes) {
+      const [a,m] = mes.split('-');
+      dadosDiarios = dadosDiarios.filter(d => d.data.getFullYear()==a && (d.data.getMonth()+1)==m);
+    }
+    dadosDiarios.sort((a,b) => b.data-a.data);
+    exibirGastosMobile();
+  }
+
+  function exibirGastosMobile() {
+    const container = document.getElementById('gastosContainer');
+    const cat = document.getElementById('filtroCategoria').value;
+    const filtrado = cat ? dadosDiarios.filter(d => d.categoria === cat) : dadosDiarios;
+    if (!filtrado.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-receipt"></i><h3>Nenhum gasto</h3></div>'; return; }
+    container.innerHTML = filtrado.map(d => `
+      <div class="gasto-item">
+        <div class="gasto-info">
+          <div class="gasto-data">${d.data.toLocaleDateString('pt-BR')}</div>
+          <div class="gasto-descricao">${d.descricao||'Sem descrição'}</div>
+          <span class="gasto-categoria">${d.categoria||'Outros'}</span>
+        </div>
+        <div class="gasto-valor">${formatarValor(d.valor)}</div>
+        <button class="btn btn-danger btn-sm btn-gasto" onclick="excluirDespesa('${d.id}')"><i class="fas fa-trash"></i></button>
+      </div>`).join('');
+  }
+
+  async function carregarResumoFinanceiro() {
+    const hoje = new Date();
+    const mes = hoje.getMonth()+1, ano = hoje.getFullYear();
+    const atual = dadosMensais.find(d => d.mes===mes && d.ano===ano);
+    const rec = atual?.receita||0, desp = atual?.despesa||0;
+    const hojeStr = hoje.toISOString().slice(0,10);
+    const diariol = receitasDiarias.filter(r => r.data.toISOString().slice(0,10)===hojeStr).reduce((s,r)=>s+r.valor,0);
+    document.getElementById('receitaMes').textContent = formatarValor(rec);
+    document.getElementById('despesasMes').textContent = formatarValor(desp);
+    document.getElementById('lucroMes').textContent = formatarValor(rec-desp);
+    document.getElementById('totalDiario').textContent = formatarValor(diariol);
+  }
+
+  function abrirModalDespesa() {
+    document.getElementById('despesaData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalDespesa').style.display = 'flex';
+  }
+
+  async function salvarDespesa() {
+    const data = document.getElementById('despesaData').value;
+    const descricao = document.getElementById('despesaDescricao').value.trim();
+    const categoria = document.getElementById('despesaCategoria').value;
+    const valor = parseFloat(document.getElementById('despesaValor').value);
+    if (!data||!descricao||!categoria||isNaN(valor)||valor<=0) { mostrarToast('Preencha todos os campos', 'error'); return; }
+    await agendouRef().collection('despesas').add({ data: new Date(data), descricao, categoria, valor });
+    fecharModal('modalDespesa');
+    await carregarGastosDiarios();
+    await carregarDadosMensais();
+    await carregarResumoFinanceiro();
+    mostrarToast('Despesa adicionada!', 'success');
+  }
+
+  async function excluirDespesa(id) {
+    if (!confirm('Excluir esta despesa?')) return;
+    await agendouRef().collection('despesas').doc(id).delete();
+    await carregarGastosDiarios();
+    await carregarDadosMensais();
+    await carregarResumoFinanceiro();
+    mostrarToast('Despesa excluída!', 'success');
+  }
+
+  // ── CONFIGURAÇÕES ─────────────────────────────────────
+  const temasData = [
+    { id:'vermelho-laranja', nome:'Vermelho e Laranja', label:'VL' },
+    { id:'verde-amarelo', nome:'Verde e Amarelo', label:'VA' },
+    { id:'rosa-branco', nome:'Rosa e Branco', label:'RB' },
+    { id:'roxo-azul', nome:'Roxo e Azul', label:'RA' },
+    { id:'branco-cinza', nome:'Branco e Cinza', label:'BC' },
+    { id:'amarelo-vermelho', nome:'Amarelo e Vermelho', label:'AV' }
+  ];
+
+  async function carregarConfiguracoes() {
+    await carregarConfiguracoesBase();
+    document.getElementById('empresaNome').value = configuracaoEmpresa.nomeEmpresa || '';
+    document.getElementById('whatsappNumber').value = configuracaoEmpresa.whatsapp || '';
+    document.getElementById('empresaSlogan').value = configuracaoEmpresa.slogan || '';
+    if (configuracaoEmpresa.logoBase64) {
+      imagemBase64 = configuracaoEmpresa.logoBase64;
+      document.getElementById('imagePreview').src = imagemBase64;
+    }
+    temaAtual = configuracaoEmpresa.tema || 'vermelho-laranja';
+    renderizarTemas();
+    renderizarHorarios();
+  }
+
+  async function carregarConfiguracoesBase() {
+    try {
+      const doc = await agendouRef().collection('configuracoes').doc('empresa').get();
+      if (doc.exists) {
+        configuracaoEmpresa = doc.data();
+        horariosFixos = ordenarHorarios(configuracaoEmpresa.horarios || ['09:00','11:00','13:00','15:00']);
+      } else {
+        horariosFixos = ['09:00','11:00','13:00','15:00'];
+        configuracaoEmpresa = {};
+      }
+    } catch(e) { horariosFixos = ['09:00','11:00','13:00','15:00']; }
+  }
+
+  function renderizarTemas() {
+    const container = document.getElementById('temasContainer');
+    container.innerHTML = temasData.map(t => `
+      <div class="tema-option tema-${t.id} ${t.id===temaAtual?'selected':''}" onclick="selecionarTema('${t.id}')">
+        <div class="tema-preview">${t.label}</div>
+        <div class="tema-nome">${t.nome}</div>
+        <div class="tema-info">Clique para selecionar</div>
+      </div>`).join('');
+  }
+
+  function selecionarTema(id) {
+    temaAtual = id;
+    renderizarTemas();
+    mostrarToast(`Tema "${temasData.find(t=>t.id===id)?.nome}" selecionado`, 'info');
+  }
+
+  function renderizarHorarios() {
+    const container = document.getElementById('horariosContainer');
+    horariosFixos = ordenarHorarios(horariosFixos);
+    container.innerHTML = horariosFixos.map((h,i) => `
+      <div style="display:flex;align-items:center;margin-bottom:10px;gap:10px;">
+        <input type="time" value="${h}" onchange="atualizarHorario(${i}, this.value)" style="flex:1;padding:10px;border:1px solid var(--gray-light);border-radius:8px;">
+        <button class="btn btn-danger btn-sm" onclick="removerHorario(${i})">🗑️</button>
+      </div>`).join('');
+  }
+
+  function adicionarHorario() {
+    let novo = '09:00';
+    if (horariosFixos.length > 0) {
+      const last = horariosFixos[horariosFixos.length-1];
+      let [h,m] = last.split(':').map(Number);
+      m += 30; if (m >= 60) { h++; m = 0; } if (h >= 24) h = 0;
+      novo = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    horariosFixos.push(novo);
+    horariosFixos = ordenarHorarios(horariosFixos);
+    renderizarHorarios();
+  }
+
+  function atualizarHorario(idx, val) {
+    if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(val)) { mostrarToast('Formato inválido', 'error'); renderizarHorarios(); return; }
+    horariosFixos[idx] = val;
+    horariosFixos = ordenarHorarios(horariosFixos);
+    renderizarHorarios();
+  }
+
+  function removerHorario(idx) {
+    if (horariosFixos.length <= 1) { mostrarToast('Mínimo 1 horário', 'error'); return; }
+    horariosFixos.splice(idx, 1);
+    renderizarHorarios();
+  }
+
+  async function salvarConfiguracoes() {
+    const nome = document.getElementById('empresaNome').value.trim();
+    const whatsapp = document.getElementById('whatsappNumber').value.trim();
+    const slogan = document.getElementById('empresaSlogan').value.trim();
+    if (!nome) { mostrarToast('Nome da empresa obrigatório', 'error'); return; }
+    if (whatsapp && !/^\d{13}$/.test(whatsapp)) { mostrarToast('WhatsApp: 13 dígitos (ex: 5592984230299)', 'error'); return; }
+    try {
+      const dados = {
+        nomeEmpresa: nome, whatsapp, slogan,
+        tema: temaAtual, horarios: ordenarHorarios(horariosFixos),
+        ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (imagemBase64) dados.logoBase64 = imagemBase64;
+      await agendouRef().collection('configuracoes').doc('empresa').set(dados);
+      mostrarToast('Configurações salvas!', 'success');
+      configuracaoEmpresa = dados;
+    } catch(e) { mostrarToast('Erro ao salvar', 'error'); }
+  }
+
+  async function processarImagem(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { mostrarToast('Selecione uma imagem', 'error'); return; }
+    if (file.size > 500*1024) { mostrarToast('Imagem muito grande (máx 500KB)', 'error'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      imagemBase64 = ev.target.result;
+      document.getElementById('imagePreview').src = imagemBase64;
+      mostrarToast('Imagem carregada!', 'success');
+    };
+    reader.readAsDataURL(file);
+  }
+</script>
+</body>
+</html>

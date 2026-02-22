@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Agendamento</title>
+  <link rel="icon" id="dynamicFavicon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%234A5568'/%3E%3Ccircle cx='16' cy='12' r='6' fill='white'/%3E%3Cpath d='M16 20 L8 32 L24 32 Z' fill='white'/%3E%3C/svg%3E">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+  <style>
+    :root {
+      --cor-primaria: #3c3cb3;
+      --cor-secundaria: #6b6bff;
+      --cor-fundo: #f8fafc;
+      --cor-fundo-secundario: #f1f5f9;
+      --cor-texto: #2d3748;
+      --cor-texto-secundario: #718096;
+      --cor-borda: #e2e8f0;
+      --cor-botao: #4a5568;
+      --cor-botao-hover: #2d3748;
+      --cor-destaque: #3c3cb3;
+      --cor-sucesso: #10b981;
+      --cor-perigo: #ef4444;
+      --sombra-suave: 0 4px 12px rgba(0,0,0,0.1);
+      --sombra-media: 0 8px 25px rgba(0,0,0,0.15);
+      --sombra-forte: 0 15px 35px rgba(0,0,0,0.2);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+    body {
+      background: linear-gradient(135deg, var(--cor-fundo) 0%, var(--cor-fundo-secundario) 50%, #e2e8f0 100%);
+      color: var(--cor-texto);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh; padding: 20px;
+      transition: background 0.5s ease;
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background-image:
+        radial-gradient(circle at 20% 80%, rgba(74,85,104,0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(113,128,150,0.05) 0%, transparent 50%);
+      pointer-events: none; z-index: -1;
+    }
+
+    /* Not found page */
+    .not-found {
+      max-width: 400px; margin: 60px auto; text-align: center;
+      background: white; border-radius: 16px; padding: 40px;
+      box-shadow: var(--sombra-media);
+    }
+    .not-found h1 { font-size: 3rem; margin-bottom: 12px; }
+    .not-found h2 { color: var(--cor-texto); margin-bottom: 8px; }
+    .not-found p { color: var(--cor-texto-secundario); }
+
+    /* Blocked page */
+    .blocked-page {
+      max-width: 400px; margin: 60px auto; text-align: center;
+      background: white; border-radius: 16px; padding: 40px;
+      box-shadow: var(--sombra-media);
+    }
+    .blocked-page h1 { font-size: 3rem; margin-bottom: 12px; }
+    .blocked-page h2 { color: #ef4444; margin-bottom: 8px; }
+    .blocked-page p { color: var(--cor-texto-secundario); }
+
+    .app-container { max-width: 700px; margin: 0 auto; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    .profile-section { text-align:center; margin-bottom:30px; padding-top:20px; animation: slideDown 0.6s ease; }
+    @keyframes slideDown { from { opacity:0; transform:translateY(-30px); } to { opacity:1; transform:translateY(0); } }
+
+    .profile-image {
+      width:130px; height:130px; border-radius:50%; object-fit:cover;
+      border:4px solid var(--cor-primaria); box-shadow:var(--sombra-media);
+      margin:0 auto 15px; display:block; padding:5px;
+      transition: all 0.3s ease;
+    }
+    .profile-image:hover { transform:scale(1.05); }
+
+    h1 { font-size:1.9rem; margin-bottom:8px; font-weight:700; color:var(--cor-texto); }
+    .subtitle { color:var(--cor-texto-secundario); font-size:1.05rem; margin-bottom:25px; font-weight:500; }
+
+    .section {
+      background:rgba(255,255,255,0.95); backdrop-filter:blur(12px);
+      border-radius:16px; padding:22px; margin-bottom:22px;
+      border:1px solid var(--cor-borda); box-shadow:var(--sombra-suave);
+      position:relative; overflow:hidden;
+      transition: all 0.3s ease; animation:fadeInUp 0.5s ease; animation-fill-mode:both;
+    }
+    .section:nth-child(2){animation-delay:.1s}
+    .section:nth-child(3){animation-delay:.2s}
+    .section:nth-child(4){animation-delay:.3s}
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .section::before {
+      content:""; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg, var(--cor-secundaria) 0%, var(--cor-primaria) 50%, var(--cor-secundaria) 100%);
+    }
+    .section:hover { transform:translateY(-5px); box-shadow:var(--sombra-media); }
+
+    h3 { margin-bottom:18px; font-weight:600; display:flex; align-items:center; color:var(--cor-texto); font-size:1.2rem; }
+    h3::before {
+      content:""; display:inline-block; width:12px; height:12px; border-radius:50%;
+      background:linear-gradient(135deg, var(--cor-secundaria) 0%, var(--cor-primaria) 100%);
+      margin-right:12px; box-shadow:0 2px 4px rgba(0,0,0,0.2);
+    }
+    .hidden { display:none !important; }
+
+    .calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-top:15px; }
+    .calendar div { text-align:center; padding:14px 5px; border-radius:12px; font-weight:500; user-select:none; transition:all 0.3s ease; border:2px solid transparent; }
+    .calendar .weekday { border:none; background:transparent; color:var(--cor-texto); font-weight:600; text-transform:uppercase; cursor:default; font-size:0.9rem; }
+    .calendar .day { border:2px solid var(--cor-borda); background:rgba(255,255,255,0.9); color:var(--cor-texto); cursor:pointer; }
+    .calendar .day:hover:not(.disabled):not(.selected) { background:rgba(0,0,0,0.05); transform:translateY(-3px); box-shadow:var(--sombra-suave); border-color:var(--cor-secundaria); }
+    .calendar .selected { background:linear-gradient(135deg,var(--cor-primaria),var(--cor-secundaria)); color:white; border-color:var(--cor-primaria); box-shadow:0 6px 15px rgba(0,0,0,0.3); transform:translateY(-2px); }
+    .calendar .disabled { background:rgba(0,0,0,0.05); color:#a0aec0; cursor:not-allowed; border-color:var(--cor-borda); }
+
+    #horarios { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+    #horarios button {
+      padding:14px 22px; border:none; border-radius:12px;
+      background:rgba(255,255,255,0.9); color:var(--cor-texto); font-size:1em;
+      cursor:pointer; transition:all 0.3s ease; flex:1; min-width:110px;
+      border:2px solid var(--cor-borda); font-weight:500;
+    }
+    #horarios button:hover:not(.disabled) { background:rgba(0,0,0,0.05); transform:translateY(-3px); box-shadow:var(--sombra-suave); border-color:var(--cor-secundaria); }
+    #horarios button.selected { background:linear-gradient(135deg,var(--cor-primaria),var(--cor-secundaria)); color:white; border-color:var(--cor-primaria); box-shadow:0 6px 15px rgba(0,0,0,0.3); }
+    #horarios button.disabled { background:rgba(0,0,0,0.05); color:#a0aec0; cursor:not-allowed; border-color:var(--cor-borda); }
+
+    input[type="text"], input[type="tel"], input[type="number"] {
+      width:100%; padding:16px; margin:10px 0 18px 0;
+      border:2px solid var(--cor-borda); border-radius:12px; font-size:1em;
+      background:rgba(255,255,255,0.9); color:var(--cor-texto); transition:all 0.3s ease;
+    }
+    input:focus { outline:none; border-color:var(--cor-primaria); box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+    input::placeholder { color:#a0aec0; }
+    label { display:block; font-weight:600; margin-top:12px; color:var(--cor-texto); }
+    .input-info { font-size:0.85rem; color:var(--cor-texto-secundario); margin-top:-10px; margin-bottom:10px; font-style:italic; }
+    .char-counter { font-size:0.8rem; color:var(--cor-texto-secundario); text-align:right; margin-top:-15px; margin-bottom:15px; font-weight:500; }
+    .char-counter.limit-reached { color:var(--cor-primaria); font-weight:bold; }
+    .value-warning { font-size:0.9em; color:var(--cor-texto-secundario); margin-top:-12px; margin-bottom:14px; font-weight:500; }
+
+    .button-link {
+      display:block; width:100%; margin-top:22px; text-align:center;
+      background:linear-gradient(135deg,var(--cor-primaria),var(--cor-secundaria));
+      color:white; padding:18px; text-decoration:none; border-radius:12px;
+      font-weight:600; font-size:1.1em; transition:all 0.3s ease;
+      cursor:pointer; border:none; box-shadow:var(--sombra-media);
+      position:relative; overflow:hidden;
+    }
+    .button-link::before {
+      content:""; position:absolute; top:0; left:-100%; width:100%; height:100%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+      transition:left 0.5s;
+    }
+    .button-link:hover::before { left:100%; }
+    .button-link:hover { transform:translateY(-3px); box-shadow:var(--sombra-forte); }
+    .button-cancel { background:linear-gradient(135deg,var(--cor-borda),#cbd5e0); color:var(--cor-texto); }
+
+    .modal {
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center;
+      z-index:1000; padding:20px; backdrop-filter:blur(8px);
+    }
+    .modal.hidden { display:none; }
+    .modal-content {
+      background:linear-gradient(135deg,#ffffff,var(--cor-fundo));
+      padding:28px; border-radius:16px; max-width:500px; text-align:center;
+      color:var(--cor-texto); width:100%; max-height:80vh; overflow-y:auto;
+      border:2px solid var(--cor-borda); box-shadow:var(--sombra-forte); position:relative;
+    }
+    .modal-content::before {
+      content:""; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg,var(--cor-secundaria),var(--cor-primaria),var(--cor-secundaria));
+    }
+    .modal-buttons { display:flex; justify-content:center; margin-top:22px; gap:12px; }
+    .modal-buttons button {
+      padding:14px 26px; font-size:16px; cursor:pointer; border:none; border-radius:12px;
+      background:rgba(255,255,255,0.9); color:var(--cor-texto); transition:all 0.3s ease; flex:1;
+      border:2px solid var(--cor-borda); font-weight:600;
+    }
+    .modal-buttons button:first-child { background:linear-gradient(135deg,var(--cor-primaria),var(--cor-secundaria)); color:white; border-color:var(--cor-primaria); }
+    .modal-buttons button:hover { transform:translateY(-2px); box-shadow:var(--sombra-suave); }
+
+    .agendamento-item {
+      background:rgba(255,255,255,0.9); padding:20px; margin:14px 0; border-radius:12px;
+      cursor:pointer; transition:all 0.3s ease; border:2px solid var(--cor-borda); text-align:left;
+    }
+    .agendamento-item:hover { background:rgba(0,0,0,0.05); transform:translateY(-3px); }
+    .agendamento-item.selected { background:linear-gradient(135deg,var(--cor-primaria),var(--cor-secundaria)); color:white; border-color:var(--cor-primaria); }
+
+    .inline-label { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+
+    @media (max-width: 600px) {
+      body { padding:15px; }
+      .profile-image { width:110px; height:110px; }
+      h1 { font-size:1.7rem; }
+      .section { padding:18px; }
+      .calendar { gap:8px; }
+      .calendar div { padding:12px 3px; font-size:0.9rem; }
+      #horarios { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+      #horarios button { padding:14px 10px; font-size:16px; }
+      .modal-buttons { flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="notFound" class="not-found hidden">
+    <h1>🔍</h1>
+    <h2>Página não encontrada</h2>
+    <p>O link de agendamento é inválido ou expirou.</p>
+  </div>
+
+  <div id="blockedPage" class="blocked-page hidden">
+    <h1>🔒</h1>
+    <h2>Serviço Indisponível</h2>
+    <p>Este profissional não está aceitando agendamentos no momento.</p>
+  </div>
+
+  <div class="app-container" id="appContainer" style="display:none">
+    <div class="profile-section">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130' viewBox='0 0 130 130'%3E%3Crect width='130' height='130' fill='%23e2e8f0'/%3E%3Ccircle cx='65' cy='50' r='25' fill='%234a5568'/%3E%3Cpath d='M65 80 L45 130 L85 130 Z' fill='%234a5568'/%3E%3C/svg%3E"
+           alt="Perfil" class="profile-image" id="profileImage">
+      <h1 id="tituloEmpresa">Agendamento</h1>
+      <div class="subtitle" id="subtituloEmpresa">Agende seu horário com praticidade</div>
+    </div>
+
+    <div class="section">
+      <h3>1️⃣ Escolha o dia (3 semanas):</h3>
+      <div class="calendar" id="calendario"></div>
+    </div>
+
+    <div class="section hidden" id="horariosSection">
+      <h3>2️⃣ Escolha o horário:</h3>
+      <div id="horarios"></div>
+    </div>
+
+    <div class="section hidden" id="formSection">
+      <h3>3️⃣ Detalhes do agendamento:</h3>
+      <div class="inline-label">
+        <label>Quantidade de serviços:</label>
+        <span id="servicosTexto"></span>
+      </div>
+      <input type="number" id="quantidade" min="1" maxlength="3" oninput="atualizarQuantidadeTexto()" />
+      <div id="qntLabel" class="value-warning">Por logística, o valor mínimo é de R$ 60,00.</div>
+      <label>Nome completo:</label>
+      <input type="text" id="nome" maxlength="40" placeholder="Digite seu nome completo" required oninput="atualizarContadorNome()" />
+      <div class="char-counter" id="contadorNome">0/40 caracteres</div>
+      <label>Contato (WhatsApp):</label>
+      <input type="tel" id="contato" placeholder="(92) 9 9999-9999" required />
+      <div class="input-info">Digite apenas números, o formato será aplicado automaticamente</div>
+      <label>Localização:</label>
+      <input type="text" id="localizacao" maxlength="200" placeholder="Rua, número da casa e Bairro" required oninput="atualizarContadorLocalizacao()" />
+      <div class="char-counter" id="contadorLocalizacao">0/200 caracteres</div>
+      <div class="input-info">Informe: Rua, número da casa e Bairro.</div>
+      <button class="button-link" onclick="concluirAgendamento()">✅ Concluir Agendamento</button>
+    </div>
+
+    <div class="section hidden" id="cancelamentoSection">
+      <button class="button-link button-cancel" onclick="mostrarModalCancelamento()">❌ Cancelar Agendamento</button>
+    </div>
+  </div>
+
+  <!-- Modal cancelamento -->
+  <div id="modalCancelamento" class="modal hidden">
+    <div class="modal-content">
+      <h3>Cancelar Agendamento</h3>
+      <p>Selecione o agendamento que deseja cancelar:</p>
+      <div id="listaAgendamentos"></div>
+      <div class="modal-buttons">
+        <button onclick="solicitarCancelamento()">Solicitar Cancelamento</button>
+        <button onclick="fecharModalCancelamento()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuX3SRhDvZS_BiKIL1q_VFwacMBwZ5tbU",
+      authDomain: "appagenda-f278b.firebaseapp.com",
+      projectId: "appagenda-f278b",
+      storageBucket: "appagenda-f278b.firebasestorage.app",
+      messagingSenderId: "676987896115",
+      appId: "1:676987896115:web:74ecdbedabca34f5923e46"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const { DateTime } = luxon;
+
+    // ── GET SERVER UID FROM URL ─────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const SERVER_UID = urlParams.get('uid');
+
+    let horariosFixos = [];
+    const hoje = DateTime.now().setZone('America/Manaus').startOf('day');
+    let diaSelecionado = null;
+    let dataSelecionada = null;
+    let botaoHorarioAtivo = null;
+    let horarioSelecionado = '';
+    let horariosOcupados = {};
+    let agendamentoSelecionadoCancelamento = null;
+    let whatsappNumber = '';
+
+    const temasDisponiveis = {
+      'vermelho-laranja': { corPrimaria:'#FF6B6B', corSecundaria:'#FFA500', corBorda:'#FFD6A5' },
+      'verde-amarelo': { corPrimaria:'#4CAF50', corSecundaria:'#FFD700', corBorda:'#C8E6C9' },
+      'rosa-branco': { corPrimaria:'#FF69B4', corSecundaria:'#FFFFFF', corBorda:'#FFC1E3' },
+      'roxo-azul': { corPrimaria:'#9B59B6', corSecundaria:'#3498DB', corBorda:'#D7BDE2' },
+      'branco-cinza': { corPrimaria:'#FFFFFF', corSecundaria:'#95A5A6', corBorda:'#BDC3C7' },
+      'amarelo-vermelho': { corPrimaria:'#FFD700', corSecundaria:'#FF6B6B', corBorda:'#FFECB3' }
+    };
+
+    function aplicarTema(temaId) {
+      const tema = temasDisponiveis[temaId] || temasDisponiveis['vermelho-laranja'];
+      const r = document.documentElement;
+      r.style.setProperty('--cor-primaria', tema.corPrimaria);
+      r.style.setProperty('--cor-secundaria', tema.corSecundaria);
+      r.style.setProperty('--cor-borda', tema.corBorda);
+    }
+
+    function agendouRef() { return db.collection('Agendou').doc(SERVER_UID); }
+
+    async function iniciar() {
+      // Validate UID
+      if (!SERVER_UID) {
+        document.getElementById('notFound').classList.remove('hidden');
+        return;
+      }
+
+      try {
+        // Check if server user exists and is active
+        const userDoc = await db.collection('usuarios').doc(SERVER_UID).get();
+        if (!userDoc.exists) {
+          document.getElementById('notFound').classList.remove('hidden');
+          return;
+        }
+
+        const userData = userDoc.data();
+
+        // Check subscription
+        if (userData.plano === 'bloqueado' || userData.plano === 'vencido') {
+          document.getElementById('blockedPage').classList.remove('hidden');
+          return;
+        }
+
+        // Also check date
+        let vencimento = null;
+        if (userData.dataVencimento?.toDate) vencimento = userData.dataVencimento.toDate();
+        else if (userData.dataVencimento) vencimento = new Date(userData.dataVencimento);
+
+        if (vencimento && new Date() > vencimento) {
+          document.getElementById('blockedPage').classList.remove('hidden');
+          return;
+        }
+
+        // Load config
+        const cfgDoc = await agendouRef().collection('configuracoes').doc('empresa').get();
+        if (cfgDoc.exists) {
+          const cfg = cfgDoc.data();
+          document.getElementById('tituloEmpresa').textContent = cfg.nomeEmpresa || 'Agendamento';
+          document.getElementById('subtituloEmpresa').textContent = cfg.slogan || 'Agende seu horário';
+          document.title = cfg.nomeEmpresa || 'Agendamento';
+
+          if (cfg.logoBase64) {
+            document.getElementById('profileImage').src = cfg.logoBase64;
+            document.getElementById('dynamicFavicon').href = cfg.logoBase64;
+          }
+
+          if (cfg.tema) aplicarTema(cfg.tema);
+          horariosFixos = cfg.horarios?.length ? cfg.horarios : ['09:00','11:00','13:00','15:00'];
+          whatsappNumber = cfg.whatsapp || '';
+        }
+
+        // Load occupied slots
+        const agSnap = await agendouRef().collection('agendamentos').get();
+        agSnap.forEach(doc => {
+          horariosOcupados[doc.id] = doc.data().horarios || [];
+        });
+
+        // Show app
+        document.getElementById('appContainer').style.display = 'block';
+        criarCalendario();
+        carregarDadosSalvos();
+        limparAgendamentosExpirados();
+        verificarExibirBotaoCancelamento();
+
+        document.getElementById('contato').addEventListener('input', function() { formatarTelefone(this); });
+        document.getElementById('nome').addEventListener('input', function() {
+          if (this.value.length > 40) this.value = this.value.substring(0, 40);
+          atualizarContadorNome();
+        });
+
+      } catch(e) {
+        console.error(e);
+        document.getElementById('notFound').classList.remove('hidden');
+      }
+    }
+
+    function formatarTelefone(input) {
+      let v = input.value.replace(/\D/g,'').substring(0,11);
+      if (v.length <= 10) v = v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      else v = v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+      input.value = v;
+    }
+
+    function formatarDataBrasileira(dataISO) {
+      const [a,m,d] = dataISO.split('-');
+      return `${d}/${m}/${a}`;
+    }
+
+    function atualizarContadorNome() {
+      const l = document.getElementById('nome').value.length;
+      const c = document.getElementById('contadorNome');
+      c.textContent = `${l}/40 caracteres`;
+      c.classList.toggle('limit-reached', l >= 40);
+    }
+
+    function atualizarContadorLocalizacao() {
+      const l = document.getElementById('localizacao').value.length;
+      const c = document.getElementById('contadorLocalizacao');
+      c.textContent = `${l}/200 caracteres`;
+      c.classList.toggle('limit-reached', l >= 200);
+    }
+
+    function limparAgendamentosExpirados() {
+      const ags = obterAgendamentosDoLocalStorage();
+      if (!ags.length) return;
+      const agora = DateTime.now().setZone('America/Manaus');
+      const validos = ags.filter(ag => {
+        const [h,min] = ag.horario.split(':').map(Number);
+        const dt = DateTime.fromISO(ag.data).set({hour:h,minute:min});
+        return dt > agora;
+      });
+      localStorage.setItem(`agendamentos_${SERVER_UID}`, JSON.stringify(validos));
+    }
+
+    function carregarDadosSalvos() {
+      const key = `dadosAgendamento_${SERVER_UID}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const d = JSON.parse(saved);
+        document.getElementById('nome').value = d.nome || '';
+        document.getElementById('contato').value = d.contato || '';
+        document.getElementById('localizacao').value = d.localizacao || '';
+        atualizarContadorNome();
+        atualizarContadorLocalizacao();
+      }
+    }
+
+    function salvarDados() {
+      localStorage.setItem(`dadosAgendamento_${SERVER_UID}`, JSON.stringify({
+        nome: document.getElementById('nome').value,
+        contato: document.getElementById('contato').value,
+        localizacao: document.getElementById('localizacao').value
+      }));
+    }
+
+    function obterAgendamentosDoLocalStorage() {
+      const raw = localStorage.getItem(`agendamentos_${SERVER_UID}`);
+      return raw ? JSON.parse(raw) : [];
+    }
+
+    function salvarAgendamentoNoLocalStorage(ag) {
+      const list = obterAgendamentosDoLocalStorage();
+      list.push(ag);
+      localStorage.setItem(`agendamentos_${SERVER_UID}`, JSON.stringify(list));
+      verificarExibirBotaoCancelamento();
+    }
+
+    function removerAgendamentoDoLocalStorage(data, horario) {
+      const list = obterAgendamentosDoLocalStorage().filter(ag => !(ag.data===data && ag.horario===horario));
+      localStorage.setItem(`agendamentos_${SERVER_UID}`, JSON.stringify(list));
+      verificarExibirBotaoCancelamento();
+    }
+
+    function verificarExibirBotaoCancelamento() {
+      const el = document.getElementById('cancelamentoSection');
+      el.classList.toggle('hidden', obterAgendamentosDoLocalStorage().length === 0);
+    }
+
+    function criarCalendario() {
+      const cal = document.getElementById('calendario');
+      cal.innerHTML = '';
+      ['D','S','T','Q','Q','S','S'].forEach(d => {
+        const div = document.createElement('div');
+        div.textContent = d; div.classList.add('weekday');
+        cal.appendChild(div);
+      });
+
+      const agora = DateTime.now().setZone('America/Manaus');
+      const primDom = hoje.minus({ days: hoje.weekday % 7 });
+
+      for (let s = 0; s < 3; s++) {
+        for (let d = 0; d < 7; d++) {
+          const data = primDom.plus({ days: s*7+d });
+          const dataStr = data.toISODate();
+          const diaSem = data.weekday % 7;
+          const div = document.createElement('div');
+          div.classList.add('day');
+          div.innerText = data.day;
+
+          let todosOcupados = true;
+          horariosFixos.forEach(hr => {
+            const [h,m] = hr.split(':').map(Number);
+            const hrDt = data.set({hour:h,minute:m});
+            const ocupado = horariosOcupados[dataStr]?.includes(hr);
+            const dentro12h = hrDt <= agora.plus({hours:12});
+            const antesAgora = data.hasSame(agora,'day') && hrDt <= agora;
+            if (!ocupado && !dentro12h && !antesAgora) todosOcupados = false;
+          });
+
+          const isPassado = data < hoje;
+          if (diaSem === 0 || diaSem === 1 || isPassado || todosOcupados) {
+            div.classList.add('disabled');
+          } else {
+            div.onclick = () => {
+              let nomeDia = data.toLocaleString({weekday:'long', locale:'pt-BR'});
+              diaSelecionado = nomeDia.charAt(0).toUpperCase() + nomeDia.slice(1);
+              dataSelecionada = dataStr;
+              document.querySelectorAll('.calendar .day').forEach(d2 => d2.classList.remove('selected'));
+              div.classList.add('selected');
+              mostrarHorarios();
+            };
+          }
+          cal.appendChild(div);
+        }
+      }
+    }
+
+    function mostrarHorarios() {
+      const sec = document.getElementById('horariosSection');
+      const container = document.getElementById('horarios');
+      container.innerHTML = '';
+      sec.classList.remove('hidden');
+      document.getElementById('formSection').classList.add('hidden');
+      botaoHorarioAtivo = null;
+      horarioSelecionado = '';
+
+      const agora = DateTime.now().setZone('America/Manaus');
+      const dataDt = DateTime.fromISO(dataSelecionada, {zone:'America/Manaus'});
+
+      horariosFixos.forEach(hr => {
+        const [h,m] = hr.split(':').map(Number);
+        const hrDt = dataDt.set({hour:h,minute:m});
+        const ocupado = horariosOcupados[dataSelecionada]?.includes(hr);
+        const dentro12h = hrDt <= agora.plus({hours:12});
+        const antesAgora = dataDt.hasSame(agora,'day') && hrDt <= agora;
+
+        const btn = document.createElement('button');
+        btn.innerText = hr;
+        if (ocupado || dentro12h || antesAgora) {
+          btn.className = 'disabled'; btn.disabled = true;
+        } else {
+          btn.onclick = () => selecionarHorario(hr, btn);
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    function selecionarHorario(hr, btn) {
+      if (horarioSelecionado === hr) {
+        horarioSelecionado = '';
+        document.getElementById('formSection').classList.add('hidden');
+        if (botaoHorarioAtivo) botaoHorarioAtivo.classList.remove('selected');
+        return;
+      }
+      horarioSelecionado = hr;
+      document.getElementById('formSection').classList.remove('hidden');
+      if (botaoHorarioAtivo) botaoHorarioAtivo.classList.remove('selected');
+      botaoHorarioAtivo = btn;
+      btn.classList.add('selected');
+    }
+
+    function atualizarQuantidadeTexto() {
+      const input = document.getElementById('quantidade');
+      if (input.value.length > 3) input.value = input.value.slice(0, 3);
+      const t = document.getElementById('servicosTexto');
+      t.textContent = input.value ? `${input.value} Serviços` : '';
+      const label = document.getElementById('qntLabel');
+      label.textContent = input.value < 1 ? 'Por logística, a quantidade mínima deve ser 1 ou mais.' : 'Por logística, o valor mínimo é de R$ 60,00.';
+    }
+
+    async function concluirAgendamento() {
+      const qnt = parseInt(document.getElementById('quantidade').value);
+      const nome = document.getElementById('nome').value.trim();
+      const contato = document.getElementById('contato').value.trim();
+      let local = document.getElementById('localizacao').value.trim();
+
+      if (local && !local.toLowerCase().includes('manaus')) local += ', Manaus/AM';
+
+      if (!qnt || qnt < 1 || !nome || !contato || !local || !dataSelecionada || !horarioSelecionado) {
+        alert('Por favor, preencha todos os campos corretamente.\nMínimo de 1 serviço.');
+        return;
+      }
+      if (nome.length > 40) { alert('Nome: máximo 40 caracteres.'); return; }
+      if (local.length > 200) { alert('Localização: máximo 200 caracteres.'); return; }
+
+      try {
+        salvarDados();
+
+        const dataRef = agendouRef().collection('agendamentos').doc(dataSelecionada);
+        await dataRef.set({ horarios: firebase.firestore.FieldValue.arrayUnion(horarioSelecionado) }, { merge: true });
+        await dataRef.collection('horarios').doc(horarioSelecionado).set({
+          nome, contato, local, quantidade: qnt,
+          servico: `${qnt} serviço(s)`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        salvarAgendamentoNoLocalStorage({ data: dataSelecionada, horario: horarioSelecionado, nome, contato, local, quantidade: qnt });
+
+        const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(local)}`;
+        const dataFmt = formatarDataBrasileira(dataSelecionada);
+        const mensagem =
+          `Olá! Gostaria de confirmar meu agendamento:\n\n` +
+          `● *Dia:* ${diaSelecionado}, ${dataFmt}\n` +
+          `● *Horário:* ${horarioSelecionado}\n` +
+          `● *Serviços:* ${qnt}\n` +
+          `● *Nome:* ${nome}\n` +
+          `● *Contato:* ${contato}\n` +
+          `● *Localização:* ${local}\n\n` +
+          `● *Ver no mapa:* ${linkMaps}`;
+
+        if (whatsappNumber) {
+          window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensagem)}`, '_blank');
+        }
+        setTimeout(() => location.reload(), 3000);
+
+      } catch(e) {
+        console.error(e);
+        alert('❌ Erro ao salvar agendamento. Tente novamente.');
+      }
+    }
+
+    function mostrarModalCancelamento() {
+      const lista = document.getElementById('listaAgendamentos');
+      lista.innerHTML = '';
+      const ags = obterAgendamentosDoLocalStorage();
+      if (!ags.length) {
+        lista.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
+      } else {
+        ags.forEach((ag, i) => {
+          const item = document.createElement('div');
+          item.className = 'agendamento-item';
+          item.innerHTML = `<strong>${ag.nome}</strong><br>Data: ${formatarDataBrasileira(ag.data)} | Horário: ${ag.horario}<br>Serviços: ${ag.quantidade}`;
+          item.onclick = () => {
+            document.querySelectorAll('.agendamento-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            agendamentoSelecionadoCancelamento = ags[i];
+          };
+          lista.appendChild(item);
+        });
+      }
+      document.getElementById('modalCancelamento').classList.remove('hidden');
+      agendamentoSelecionadoCancelamento = null;
+    }
+
+    function fecharModalCancelamento() {
+      document.getElementById('modalCancelamento').classList.add('hidden');
+    }
+
+    function solicitarCancelamento() {
+      if (!agendamentoSelecionadoCancelamento) { alert('Selecione um agendamento para cancelar.'); return; }
+      const ag = agendamentoSelecionadoCancelamento;
+      const msg =
+        `Olá! Gostaria de cancelar meu agendamento:\n\n` +
+        `● *Dia:* ${formatarDataBrasileira(ag.data)}\n` +
+        `● *Horário:* ${ag.horario}\n` +
+        `● *Serviços:* ${ag.quantidade}\n` +
+        `● *Nome:* ${ag.nome}\n` +
+        `● *Contato:* ${ag.contato}\n\n` +
+        `Por favor, confirme o cancelamento.`;
+
+      removerAgendamentoDoLocalStorage(ag.data, ag.horario);
+      if (whatsappNumber) window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+      fecharModalCancelamento();
+    }
+
+    iniciar();
+  </script>
+</body>
+</html>
