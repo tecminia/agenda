@@ -685,12 +685,6 @@
 
       const userData = userDoc.data();
 
-      // Admin goes to admin panel
-      if (userData.role === 'admin') {
-        window.location.href = 'admin.html';
-        return;
-      }
-
       // Check subscription
       await verificarEExibirAssinatura(userUID, userData);
 
