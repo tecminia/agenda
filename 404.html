@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redirecionando...</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F8F9FA;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2C3E50;
+    }
+    .box {
+      text-align: center;
+      padding: 40px 24px;
+      max-width: 380px;
+      width: 100%;
+    }
+    .spinner {
+      width: 52px; height: 52px;
+      border: 4px solid rgba(231,76,60,0.15);
+      border-top-color: #E74C3C;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 1.3rem; margin-bottom: 10px; }
+    p { color: #7F8C8D; font-size: 0.95rem; }
+
+    /* estado de erro */
+    .icon-error { font-size: 3.5rem; margin-bottom: 16px; }
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 28px;
+      background: linear-gradient(135deg, #E74C3C, #C0392B);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box" id="loadingState">
+  <div class="spinner"></div>
+  <h2>Carregando agenda...</h2>
+  <p>Aguarde um instante</p>
+</div>
+
+<div class="box" id="errorState" style="display:none">
+  <div class="icon-error">😕</div>
+  <h2>Página não encontrada</h2>
+  <p id="errorMsg">Este link de agendamento não existe ou foi removido.</p>
+  <a href="/agenda/" class="btn">Voltar ao início</a>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuX3SRhDvZS_BiKIL1q_VFwacMBwZ5tbU",
+    authDomain: "appagenda-f278b.firebaseapp.com",
+    projectId: "appagenda-f278b",
+    storageBucket: "appagenda-f278b.firebasestorage.app",
+    messagingSenderId: "676987896115",
+    appId: "1:676987896115:web:74ecdbedabca34f5923e46"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  function mostrarErro(msg) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    if (msg) document.getElementById('errorMsg').textContent = msg;
+  }
+
+  async function resolver() {
+    // Extrai o slug do pathname
+    // Exemplo: /agenda/minha-loja → "minha-loja"
+    const partes = window.location.pathname.replace(/\/$/, '').split('/');
+    const slug = partes[partes.length - 1];
+
+    // Se não há slug ou é uma rota conhecida, mostra erro genérico
+    if (!slug || slug === 'agenda' || slug === '404') {
+      mostrarErro('Endereço inválido.');
+      return;
+    }
+
+    try {
+      // Busca UID pelo slug na coleção "slugs"
+      const doc = await db.collection('slugs').doc(slug).get();
+
+      if (!doc.exists) {
+        mostrarErro(`Nenhuma agenda encontrada para "${slug}".`);
+        return;
+      }
+
+      const { uid } = doc.data();
+
+      if (!uid) {
+        mostrarErro('Link inválido. Solicite um novo link ao responsável.');
+        return;
+      }
+
+      // Redireciona para a página de agendamento com o UID
+      const base = window.location.origin + '/agenda/clientes.html';
+      window.location.replace(`${base}?uid=${uid}`);
+
+    } catch (e) {
+      console.error(e);
+      mostrarErro('Erro ao carregar. Verifique sua conexão e tente novamente.');
+    }
+  }
+
+  resolver();
+</script>
+</body>
+</html>

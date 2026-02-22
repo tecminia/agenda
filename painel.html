@@ -699,10 +699,8 @@
         return;
       }
 
-      // Build public link
-      linkPublico = `${window.location.origin}/clientes.html?uid=${userUID}`;
-      document.getElementById('linkPublico').textContent = linkPublico;
-      document.getElementById('modalLinkDisplay').textContent = linkPublico;
+      // Build public link (slug-based se disponível, fallback para uid)
+      await atualizarLinkPublico();
 
       // Show UI
       document.getElementById('authOverlay').style.display = 'none';
@@ -1382,6 +1380,37 @@
     renderizarHorarios();
   }
 
+  // ── SLUG / LINK PÚBLICO ───────────────────────────────
+  function gerarSlug(nome) {
+    return nome
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')  // só letras, números, espaços, hífens
+      .replace(/\s+/g, '-')           // espaços → hífens
+      .replace(/-+/g, '-')            // hífens duplos → um só
+      .slice(0, 50);                  // limite de tamanho
+  }
+
+  async function atualizarLinkPublico() {
+    try {
+      const cfgDoc = await agendouRef().collection('configuracoes').doc('empresa').get();
+      let slug = cfgDoc.exists ? cfgDoc.data().slug : null;
+
+      const base = `${window.location.origin}/agenda`;
+      if (slug) {
+        linkPublico = `${base}/${slug}`;
+      } else {
+        // fallback enquanto ainda não tem slug salvo
+        linkPublico = `${base}/clientes.html?uid=${userUID}`;
+      }
+    } catch (e) {
+      linkPublico = `${window.location.origin}/agenda/clientes.html?uid=${userUID}`;
+    }
+    document.getElementById('linkPublico').textContent = linkPublico;
+    document.getElementById('modalLinkDisplay').textContent = linkPublico;
+  }
+
   async function salvarConfiguracoes() {
     const nome = document.getElementById('empresaNome').value.trim();
     const whatsapp = document.getElementById('whatsappNumber').value.trim();
@@ -1389,15 +1418,29 @@
     if (!nome) { mostrarToast('Nome da empresa obrigatório', 'error'); return; }
     if (whatsapp && !/^\d{13}$/.test(whatsapp)) { mostrarToast('WhatsApp: 13 dígitos (ex: 5592984230299)', 'error'); return; }
     try {
+      // Gera slug a partir do nome
+      const slug = gerarSlug(nome);
+
+      // Remove slug antigo do Firestore (se existia e mudou)
+      const cfgAtual = configuracaoEmpresa;
+      if (cfgAtual.slug && cfgAtual.slug !== slug) {
+        await db.collection('slugs').doc(cfgAtual.slug).delete().catch(() => {});
+      }
+
+      // Registra novo slug → uid na coleção global "slugs"
+      await db.collection('slugs').doc(slug).set({ uid: userUID });
+
       const dados = {
-        nomeEmpresa: nome, whatsapp, slogan,
+        nomeEmpresa: nome, whatsapp, slogan, slug,
         tema: temaAtual, horarios: ordenarHorarios(horariosFixos),
         ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
       };
       if (imagemBase64) dados.logoBase64 = imagemBase64;
       await agendouRef().collection('configuracoes').doc('empresa').set(dados);
-      mostrarToast('Configurações salvas!', 'success');
+
       configuracaoEmpresa = dados;
+      await atualizarLinkPublico();
+      mostrarToast('Configurações salvas! Link atualizado ✓', 'success');
     } catch(e) { mostrarToast('Erro ao salvar', 'error'); }
   }
 
