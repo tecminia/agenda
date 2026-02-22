@@ -159,7 +159,7 @@
                         const data = doc.data();
                         if (data.status === 'active') {
                             localStorage.setItem('agendamentoSession', JSON.stringify({ uid: user.uid, email: user.email, name: data.name, businessName: data.businessName, timestamp: new Date().toISOString() }));
-                            window.location.replace('agendamento-painel.html');
+                            window.location.replace('index.html');
                         }
                     }
                 } catch(e) {}
@@ -265,7 +265,7 @@
                     timestamp: new Date().toISOString()
                 }));
                 notify('Bem-vindo!', 'success');
-                setTimeout(() => window.location.replace('agendamento-painel.html'), 800);
+                setTimeout(() => window.location.replace('index.html'), 800);
 
             } catch (err) {
                 let msg = 'Erro ao fazer login.';
